@@ -1,0 +1,547 @@
+:root {
+  --bg: #050505;
+  --surface: rgba(16, 16, 16, 0.96);
+  --surface-soft: rgba(255, 255, 255, 0.03);
+  --line: rgba(212, 175, 55, 0.16);
+  --line-strong: rgba(212, 175, 55, 0.3);
+  --texto: #f4f0e4;
+  --texto-suave: #beb7a7;
+  --texto-fraco: #8f887b;
+  --dourado: #d4af37;
+  --dourado-claro: #f0d06b;
+  --verde: #78d49d;
+  --vermelho: #ff978c;
+  --laranja: #f1c46d;
+  --cinza: #d8d2c5;
+  --sombra: 0 32px 90px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Manrope", sans-serif;
+  color: var(--texto);
+  background:
+    radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.08), transparent 22%),
+    linear-gradient(180deg, #040404 0%, #090909 48%, #050505 100%);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+code {
+  color: var(--dourado-claro);
+}
+
+.pagina {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 48px;
+}
+
+.hero-auth,
+.app-shell,
+.auth-card,
+.cartao-resumo,
+.cartao-formulario,
+.cartao-lista,
+.cartao-admin {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(10, 10, 10, 0.98));
+  border: 1px solid var(--line);
+  box-shadow: var(--sombra);
+}
+
+.hero-auth::before,
+.app-shell::before,
+.auth-card::before,
+.cartao-resumo::before,
+.cartao-formulario::before,
+.cartao-lista::before,
+.cartao-admin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), transparent 34%, transparent 68%, rgba(212, 175, 55, 0.04));
+}
+
+.hero-auth {
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: 28px;
+  padding: 30px;
+  border-radius: 30px;
+}
+
+.hero-conteudo,
+.painel-auth,
+.app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-conteudo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.rotulo {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 34px;
+  margin: 0 0 14px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: var(--dourado-claro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero-conteudo h1,
+.cabecalho-card h2,
+.cabecalho-card h3,
+.topo-app h2,
+.cartao-resumo h3 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+}
+
+.hero-conteudo h1 {
+  max-width: 12ch;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  line-height: 0.95;
+}
+
+.hero-texto,
+.cabecalho-card p,
+.destaque-card span,
+.aviso-card p,
+.texto-suave,
+.linha-transacao small,
+.linha-admin small {
+  color: var(--texto-suave);
+}
+
+.grade-destaques {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.destaque-card,
+.aviso-card,
+.mini-card,
+.mensagem,
+.transacao-vazia {
+  border-radius: 20px;
+}
+
+.destaque-card {
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.destaque-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.aviso-card {
+  padding: 18px 20px;
+  background: rgba(212, 175, 55, 0.06);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.aviso-card p {
+  margin: 10px 0 0;
+}
+
+.selo-aviso {
+  color: var(--dourado-claro);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.painel-auth {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-card,
+.app-shell,
+.cartao-resumo,
+.cartao-formulario,
+.cartao-lista,
+.cartao-admin {
+  padding: 24px;
+  border-radius: 26px;
+}
+
+.cabecalho-card {
+  margin-bottom: 18px;
+}
+
+.cabecalho-card.interno {
+  margin-bottom: 14px;
+}
+
+.cabecalho-card p {
+  margin: 8px 0 0;
+}
+
+.formulario {
+  display: grid;
+  gap: 11px;
+}
+
+.formulario label {
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.formulario input,
+.formulario select {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--texto);
+  outline: none;
+}
+
+.formulario input::placeholder {
+  color: #786f61;
+}
+
+.formulario input:focus,
+.formulario select:focus {
+  border-color: rgba(212, 175, 55, 0.58);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12);
+}
+
+.botao-principal,
+.botao-secundario,
+.botao-excluir,
+.botao-admin-acao {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.botao-principal {
+  background: linear-gradient(180deg, var(--dourado-claro), var(--dourado));
+  color: #17120a;
+  box-shadow: 0 14px 34px rgba(212, 175, 55, 0.18);
+}
+
+.botao-secundario,
+.botao-admin-acao {
+  background: rgba(212, 175, 55, 0.08);
+  color: var(--dourado-claro);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.botao-excluir {
+  background: rgba(255, 151, 140, 0.08);
+  color: var(--vermelho);
+  border: 1px solid rgba(255, 151, 140, 0.14);
+}
+
+.botao-principal:hover,
+.botao-secundario:hover,
+.botao-excluir:hover,
+.botao-admin-acao:hover {
+  transform: translateY(-1px);
+}
+
+.botao-principal:hover {
+  box-shadow: 0 18px 40px rgba(212, 175, 55, 0.22);
+}
+
+.mensagem {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+}
+
+.mensagem.info {
+  color: #f2d179;
+  background: rgba(240, 191, 98, 0.1);
+  border-color: rgba(240, 191, 98, 0.2);
+}
+
+.mensagem.sucesso {
+  color: #9ce6b5;
+  background: rgba(120, 212, 157, 0.1);
+  border-color: rgba(120, 212, 157, 0.18);
+}
+
+.mensagem.erro {
+  color: #ffb6ad;
+  background: rgba(255, 151, 140, 0.1);
+  border-color: rgba(255, 151, 140, 0.18);
+}
+
+.app-shell {
+  display: grid;
+  gap: 22px;
+  border-radius: 30px;
+}
+
+.topo-app {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.grade-app {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 22px;
+}
+
+.cartao-resumo {
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.22), transparent 32%),
+    linear-gradient(135deg, #1f180b 0%, #111111 68%);
+}
+
+.cabecalho-resumo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rotulo-cartao {
+  margin: 0 0 10px;
+  color: #d5caa4;
+}
+
+.cartao-resumo h3 {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.selo-status,
+.pill-tipo,
+.pill-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.selo-status,
+.pill-status.approved {
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--dourado-claro);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.mini-resumos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.mini-card {
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.mini-card span {
+  display: block;
+  color: var(--texto-fraco);
+  margin-bottom: 8px;
+}
+
+.mini-card strong {
+  font-size: 1.08rem;
+}
+
+.lista-transacoes,
+.lista-usuarios-admin {
+  display: grid;
+  gap: 12px;
+}
+
+.linha-transacao,
+.linha-admin {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.linha-transacao {
+  grid-template-columns: 120px minmax(0, 1.4fr) minmax(120px, 0.8fr) auto;
+}
+
+.linha-admin {
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 0.7fr) minmax(0, 1.2fr);
+}
+
+.linha-transacao:last-child,
+.linha-admin:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.linha-transacao:first-child,
+.linha-admin:first-child {
+  padding-top: 8px;
+}
+
+.linha-transacao h4,
+.linha-transacao p,
+.linha-admin p,
+.transacao-vazia p {
+  margin: 0;
+}
+
+.pill-tipo.entrada {
+  color: var(--verde);
+  background: rgba(120, 212, 157, 0.12);
+}
+
+.pill-tipo.saida {
+  color: var(--vermelho);
+  background: rgba(255, 151, 140, 0.12);
+}
+
+.pill-status.pending {
+  color: var(--laranja);
+  background: rgba(241, 196, 109, 0.12);
+}
+
+.pill-status.rejected {
+  color: var(--vermelho);
+  background: rgba(255, 151, 140, 0.1);
+}
+
+.pill-status.deactivated {
+  color: var(--cinza);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.valor-transacao p {
+  font-weight: 800;
+}
+
+.valor-transacao.entrada p {
+  color: var(--verde);
+}
+
+.valor-transacao.saida p {
+  color: var(--vermelho);
+}
+
+.acoes-admin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.grade-admin-cabecalho {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 0.7fr) minmax(0, 1.2fr);
+  gap: 14px;
+  padding: 0 0 14px;
+  color: var(--dourado-claro);
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.transacao-vazia {
+  padding: 20px;
+  background: var(--surface-soft);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.oculto {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .hero-auth,
+  .grade-app {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-conteudo h1 {
+    max-width: none;
+  }
+
+  .linha-transacao,
+  .linha-admin,
+  .grade-admin-cabecalho {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .pagina {
+    width: min(100% - 18px, 1240px);
+    padding-top: 14px;
+  }
+
+  .hero-auth,
+  .app-shell,
+  .auth-card,
+  .cartao-resumo,
+  .cartao-formulario,
+  .cartao-lista,
+  .cartao-admin {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .grade-destaques,
+  .mini-resumos {
+    grid-template-columns: 1fr;
+  }
+
+  .topo-app,
+  .cabecalho-resumo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

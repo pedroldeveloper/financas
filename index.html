@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas Caixa Firebase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="pagina">
+    <section id="tela-auth" class="hero-auth">
+      <div class="hero-conteudo">
+        <p class="rotulo">Atlas Caixa Firebase</p>
+        <h1>Autenticação real com Firebase e finanças sincronizadas na nuvem.</h1>
+        <p class="hero-texto">
+          Este projeto usa Firebase Authentication e Cloud Firestore para criar contas,
+          aprovar acessos e salvar transações por usuário sem backend próprio.
+        </p>
+
+        <div class="grade-destaques">
+          <article class="destaque-card">
+            <strong>Login real</strong>
+            <span>Cadastro e acesso por email e senha com Firebase Authentication.</span>
+          </article>
+          <article class="destaque-card">
+            <strong>Dados online</strong>
+            <span>Transações e status de usuários ficam no Firestore e funcionam em qualquer dispositivo.</span>
+          </article>
+        </div>
+
+        <div class="aviso-card">
+          <span class="selo-aviso">Aviso importante</span>
+          <p>
+            Este projeto é educacional. A segurança depende da configuração correta do Firebase,
+            das regras do Firestore e do email definido como administrador.
+          </p>
+        </div>
+      </div>
+
+      <div class="painel-auth">
+        <div class="auth-card">
+          <div class="cabecalho-card">
+            <p class="rotulo">Entrar</p>
+            <h2>Acessar conta</h2>
+            <p>Somente contas aprovadas conseguem usar o sistema financeiro.</p>
+          </div>
+
+          <div id="mensagem-auth" class="mensagem oculto" aria-live="polite"></div>
+
+          <form id="form-login" class="formulario" autocomplete="off">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" placeholder="voce@email.com" required>
+
+            <label for="login-senha">Senha</label>
+            <input id="login-senha" name="senha" type="password" placeholder="Digite sua senha" required>
+
+            <button class="botao-principal" type="submit">Entrar</button>
+          </form>
+        </div>
+
+        <div class="auth-card">
+          <div class="cabecalho-card">
+            <p class="rotulo">Cadastro</p>
+            <h2>Criar nova conta</h2>
+            <p>No registro, a conta é criada no Firebase e começa com status pendente.</p>
+          </div>
+
+          <form id="form-registro" class="formulario" autocomplete="off">
+            <label for="registro-email">Email</label>
+            <input id="registro-email" name="email" type="email" placeholder="voce@email.com" required>
+
+            <label for="registro-senha">Senha</label>
+            <input id="registro-senha" name="senha" type="password" placeholder="Crie uma senha" required>
+
+            <button class="botao-secundario" type="submit">Registrar conta</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="tela-app" class="app-shell oculto">
+      <header class="topo-app">
+        <div>
+          <p class="rotulo">Painel financeiro</p>
+          <h2 id="titulo-usuario">Olá</h2>
+          <p class="texto-suave">Seus dados são carregados diretamente do Firebase.</p>
+        </div>
+        <button id="botao-logout" class="botao-secundario" type="button">Sair</button>
+      </header>
+
+      <div id="mensagem-app" class="mensagem oculto" aria-live="polite"></div>
+
+      <section class="grade-app">
+        <article class="cartao-resumo">
+          <div class="cabecalho-resumo">
+            <div>
+              <p class="rotulo-cartao">Saldo atual</p>
+              <h3 id="saldo-atual">R$ 0,00</h3>
+            </div>
+            <span class="selo-status">Sincronizado</span>
+          </div>
+
+          <div class="mini-resumos">
+            <div class="mini-card">
+              <span>Entradas</span>
+              <strong id="total-entradas">R$ 0,00</strong>
+            </div>
+            <div class="mini-card">
+              <span>Saídas</span>
+              <strong id="total-saidas">R$ 0,00</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="cartao-formulario">
+          <div class="cabecalho-card interno">
+            <p class="rotulo">Nova transação</p>
+            <h3>Adicionar lançamento</h3>
+            <p>Os lançamentos ficam salvos na coleção <code>transactions</code> do Firestore.</p>
+          </div>
+
+          <form id="form-transacao" class="formulario" autocomplete="off">
+            <label for="transacao-tipo">Tipo</label>
+            <select id="transacao-tipo" name="tipo" required>
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saída</option>
+            </select>
+
+            <label for="transacao-valor">Valor</label>
+            <input id="transacao-valor" name="valor" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+
+            <label for="transacao-descricao">Descrição</label>
+            <input id="transacao-descricao" name="descricao" type="text" placeholder="Ex.: salário, aluguel, mercado" required>
+
+            <label for="transacao-data">Data</label>
+            <input id="transacao-data" name="data" type="date" required>
+
+            <button class="botao-principal" type="submit">Salvar transação</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="cartao-lista">
+        <div class="cabecalho-card interno">
+          <p class="rotulo">Histórico</p>
+          <h3>Transações do usuário</h3>
+          <p>Cada conta visualiza apenas os próprios documentos no Firestore.</p>
+        </div>
+        <div id="lista-transacoes" class="lista-transacoes"></div>
+      </section>
+
+      <section id="secao-admin" class="cartao-admin oculto">
+        <div class="cabecalho-card interno">
+          <p class="rotulo">Administração</p>
+          <h3>Painel administrativo</h3>
+          <p>Disponível apenas para o email configurado como administrador em <code>firebase.js</code>.</p>
+        </div>
+
+        <div class="grade-admin-cabecalho">
+          <span>Email</span>
+          <span>Status</span>
+          <span>Ações</span>
+        </div>
+        <div id="lista-usuarios-admin" class="lista-usuarios-admin"></div>
+      </section>
+    </section>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
