@@ -55,8 +55,7 @@ code {
 .cartao-formulario,
 .cartao-lista,
 .cartao-admin,
-.modal-card,
-.admin-bloco {
+.modal-card {
   position: relative;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(10, 10, 10, 0.98));
@@ -71,8 +70,7 @@ code {
 .cartao-formulario::before,
 .cartao-lista::before,
 .cartao-admin::before,
-.modal-card::before,
-.admin-bloco::before {
+.modal-card::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -91,8 +89,7 @@ code {
 .hero-conteudo,
 .painel-auth,
 .app-shell,
-.modal-card,
-.admin-bloco {
+.modal-card {
   position: relative;
   z-index: 1;
   min-width: 0;
@@ -145,8 +142,7 @@ code {
 .texto-suave,
 .linha-transacao small,
 .linha-admin small,
-.texto-saldo,
-.linha-log small {
+.texto-saldo {
   color: var(--texto-suave);
 }
 
@@ -160,8 +156,7 @@ code {
 .aviso-card,
 .mini-card,
 .mensagem,
-.transacao-vazia,
-.linha-log {
+.transacao-vazia {
   border-radius: 20px;
 }
 
@@ -205,8 +200,7 @@ code {
 .cartao-formulario,
 .cartao-lista,
 .cartao-admin,
-.modal-card,
-.admin-bloco {
+.modal-card {
   padding: 24px;
   border-radius: 26px;
 }
@@ -230,6 +224,12 @@ code {
 .formulario {
   display: grid;
   gap: 11px;
+}
+
+.acoes-auth {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .formulario label {
@@ -261,6 +261,8 @@ code {
 
 .botao-principal,
 .botao-secundario,
+.botao-perigo,
+.botao-link,
 .botao-excluir,
 .botao-admin-acao {
   min-height: 48px;
@@ -279,10 +281,29 @@ code {
 }
 
 .botao-secundario,
+.botao-perigo,
 .botao-admin-acao {
   background: rgba(212, 175, 55, 0.08);
   color: var(--dourado-claro);
   border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.botao-perigo {
+  color: var(--vermelho);
+  border-color: rgba(255, 151, 140, 0.2);
+  background: rgba(255, 151, 140, 0.08);
+}
+
+.botao-link {
+  min-height: auto;
+  padding: 0;
+  justify-self: flex-start;
+  background: transparent;
+  color: var(--dourado-claro);
+  border: 0;
+  border-radius: 0;
+  font-weight: 700;
+  box-shadow: none;
 }
 
 .botao-admin-acao.rejeitar {
@@ -312,6 +333,8 @@ code {
 
 .botao-principal:hover,
 .botao-secundario:hover,
+.botao-perigo:hover,
+.botao-link:hover,
 .botao-excluir:hover,
 .botao-admin-acao:hover {
   transform: translateY(-1px);
@@ -319,6 +342,18 @@ code {
 
 .botao-principal:hover {
   box-shadow: 0 18px 40px rgba(212, 175, 55, 0.22);
+}
+
+.botao-link:hover {
+  color: var(--texto);
+  box-shadow: none;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .mensagem {
@@ -461,8 +496,7 @@ code {
 }
 
 .lista-transacoes,
-.lista-usuarios-admin,
-.lista-logs-admin {
+.lista-usuarios-admin {
   display: grid;
   gap: 12px;
 }
@@ -498,21 +532,18 @@ code {
 .linha-transacao h4,
 .linha-transacao p,
 .linha-admin p,
-.transacao-vazia p,
-.linha-log p {
+.transacao-vazia p {
   margin: 0;
 }
 
 .linha-transacao h4,
-.linha-admin strong,
-.linha-log strong {
+.linha-admin strong {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .pill-tipo,
-.pill-status,
-.pill-log {
+.pill-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -592,33 +623,6 @@ code {
   text-transform: uppercase;
 }
 
-.admin-grade {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
-  gap: 20px;
-}
-
-.linha-log {
-  padding: 16px;
-  background: var(--surface-soft);
-  border: 1px solid rgba(212, 175, 55, 0.08);
-}
-
-.linha-log strong {
-  display: block;
-  margin-bottom: 6px;
-}
-
-.linha-log p {
-  margin-top: 4px;
-}
-
-.pill-log {
-  margin-bottom: 10px;
-  background: rgba(212, 175, 55, 0.12);
-  color: var(--dourado-claro);
-}
-
 .transacao-vazia {
   padding: 20px;
   background: var(--surface-soft);
@@ -661,7 +665,6 @@ code {
 }
 
 @media (max-width: 1180px) {
-  .admin-grade,
   .secao-transacoes,
   .hero-auth {
     grid-template-columns: 1fr;
@@ -693,8 +696,7 @@ code {
   .cartao-formulario,
   .cartao-lista,
   .cartao-admin,
-  .modal-card,
-  .admin-bloco {
+  .modal-card {
     padding: 20px;
     border-radius: 22px;
   }
