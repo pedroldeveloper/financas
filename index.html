@@ -39,14 +39,19 @@
       <div class="painel-auth">
         <div class="auth-card">
           <div class="cabecalho-card">
-            <p class="rotulo">Entrar</p>
-            <h2>Acesso à conta</h2>
-            <p>Informe seu e-mail e sua senha.</p>
+            <p id="rotulo-auth" class="rotulo">Entrar</p>
+            <h2 id="titulo-auth">Acesse sua conta</h2>
+            <p id="texto-auth">Informe seu e-mail e sua senha para continuar.</p>
           </div>
 
           <div id="mensagem-auth" class="mensagem oculto" aria-live="polite"></div>
 
-          <form id="form-login" class="formulario" autocomplete="off" novalidate>
+          <div class="alternador-auth" role="tablist" aria-label="Alternar entre entrar e criar conta">
+            <button id="botao-modo-login" class="botao-modo-auth ativo" type="button" aria-pressed="true">Entrar</button>
+            <button id="botao-modo-registro" class="botao-modo-auth" type="button" aria-pressed="false">Criar conta</button>
+          </div>
+
+          <form id="form-auth" class="formulario" autocomplete="off" novalidate>
             <label for="login-email">E-mail</label>
             <input id="login-email" name="email" type="email" placeholder="nome@gmail.com" required>
 
@@ -54,26 +59,8 @@
             <input id="login-senha" name="senha" type="password" placeholder="Digite sua senha" required minlength="6">
 
             <div class="acoes-auth">
-              <button class="botao-principal" type="submit">Entrar</button>
+              <button id="botao-submit-auth" class="botao-principal" type="submit">Entrar</button>
             </div>
-          </form>
-        </div>
-
-        <div class="auth-card">
-          <div class="cabecalho-card">
-            <p class="rotulo">Cadastro</p>
-            <h2>Solicitar acesso</h2>
-            <p>O acesso será liberado após validação administrativa.</p>
-          </div>
-
-          <form id="form-registro" class="formulario" autocomplete="off" novalidate>
-            <label for="registro-email">E-mail</label>
-            <input id="registro-email" name="email" type="email" placeholder="nome@gmail.com" required>
-
-            <label for="registro-senha">Senha</label>
-            <input id="registro-senha" name="senha" type="password" placeholder="Crie uma senha" required minlength="6">
-
-            <button class="botao-secundario" type="submit">Registrar conta</button>
           </form>
         </div>
       </div>
