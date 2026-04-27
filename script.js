@@ -53,8 +53,6 @@ const elementos = {
   formTransacao: document.getElementById("form-transacao"),
   formPerfil: document.getElementById("form-perfil"),
   campoLoginEmail: document.getElementById("login-email"),
-  campoLoginSenha: document.getElementById("login-senha"),
-  botaoResetSenha: document.getElementById("botao-reset-senha"),
   botaoLogout: document.getElementById("botao-logout"),
   botaoEditarPerfil: document.getElementById("botao-editar-perfil"),
   botaoExcluirMinhaConta: document.getElementById("botao-excluir-minha-conta"),
@@ -171,12 +169,12 @@ function formatarMoeda(valor) {
 
 function formatarData(dataString) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataString)) {
-    return "Data invalida";
+    return "Data inválida";
   }
 
   const data = new Date(`${dataString}T12:00:00`);
   if (Number.isNaN(data.getTime())) {
-    return "Data invalida";
+    return "Data inválida";
   }
 
   return data.toLocaleDateString("pt-BR", {
@@ -242,7 +240,7 @@ function resetarResumoFinanceiro() {
   elementos.totalSaidas.textContent = formatarMoeda(0);
   elementos.listaTransacoes.innerHTML = `
     <div class="transacao-vazia">
-      <p>Nenhuma transacao foi registrada ate o momento.</p>
+      <p>Nenhuma transação foi registrada até o momento.</p>
     </div>
   `;
 }
@@ -280,19 +278,19 @@ function mostrarTelaApp() {
 
 function traduzirErroAuth(codigo) {
   const mapa = {
-    "auth/email-already-in-use": "Este email ja esta em uso.",
-    "auth/invalid-email": "O email informado e invalido.",
-    "auth/missing-email": "Informe um email valido para continuar.",
-    "auth/weak-password": "A senha e insuficiente. Utilize no minimo 6 caracteres.",
-    "auth/user-not-found": "Nao foi localizada uma conta com este email.",
-    "auth/wrong-password": "A senha informada esta incorreta.",
-    "auth/invalid-login-credentials": "Email ou senha invalidos.",
-    "auth/network-request-failed": "Falha de conexao. Verifique sua internet e tente novamente.",
+    "auth/email-already-in-use": "Este e-mail já está em uso.",
+    "auth/invalid-email": "O e-mail informado é inválido.",
+    "auth/missing-email": "Informe um e-mail válido para continuar.",
+    "auth/weak-password": "A senha é muito fraca. Use no mínimo 6 caracteres.",
+    "auth/user-not-found": "Não foi localizada uma conta com este e-mail.",
+    "auth/wrong-password": "A senha informada está incorreta.",
+    "auth/invalid-login-credentials": "E-mail ou senha inválidos.",
+    "auth/network-request-failed": "Falha de conexão. Verifique sua internet e tente novamente.",
     "auth/too-many-requests": "Foram detectadas muitas tentativas. Aguarde alguns minutos e tente novamente.",
-    "auth/requires-recent-login": "Entre novamente e repita a acao para confirmar sua identidade."
+    "auth/requires-recent-login": "Entre novamente e repita a ação para confirmar sua identidade."
   };
 
-  return mapa[codigo] || "Ocorreu um erro inesperado. Verifique a configuracao do servico.";
+  return mapa[codigo] || "Ocorreu um erro inesperado. Verifique a configuração do serviço.";
 }
 
 function traduzirErroFirestore(erro, padrao) {
@@ -303,11 +301,11 @@ function traduzirErroFirestore(erro, padrao) {
   }
 
   const mapa = {
-    "permission-denied": "Permissao negada pelo Firestore. Verifique as regras do projeto.",
-    unavailable: "Servico indisponivel no momento. Tente novamente em instantes.",
-    unauthenticated: "Sessao invalida. Entre novamente para continuar.",
-    "not-found": "Registro nao encontrado.",
-    cancelled: "Operacao cancelada."
+    "permission-denied": "Permissão negada pelo Firestore. Verifique as regras do projeto.",
+    unavailable: "Serviço indisponível no momento. Tente novamente em instantes.",
+    unauthenticated: "Sessão inválida. Entre novamente para continuar.",
+    "not-found": "Registro não encontrado.",
+    cancelled: "Operação cancelada."
   };
 
   return mapa[erro.code] || `${padrao} (${erro.code})`;
@@ -317,19 +315,19 @@ function validarUsername(username) {
   const limpo = String(username || "").trim().replace(/\s+/g, " ");
 
   if (!limpo) {
-    return "Informe um nome de usuario.";
+    return "Informe um nome de usuário.";
   }
 
   if (limpo.length < 3) {
-    return "O nome de usuario deve conter pelo menos 3 caracteres.";
+    return "O nome de usuário deve conter pelo menos 3 caracteres.";
   }
 
   if (limpo.length > 30) {
-    return "O nome de usuario deve conter no maximo 30 caracteres.";
+    return "O nome de usuário deve conter no máximo 30 caracteres.";
   }
 
   if (!/^[\p{L}\p{N}._\-\s]+$/u.test(limpo)) {
-    return "Utilize apenas letras, numeros, espacos, ponto, hifen ou sublinhado.";
+    return "Use apenas letras, números, espaços, ponto, hífen ou sublinhado.";
   }
 
   return "";
@@ -337,10 +335,10 @@ function validarUsername(username) {
 
 function abrirModalPerfil(obrigatorio, usernameAtual = "") {
   modoPerfilObrigatorio = obrigatorio;
-  elementos.tituloModalPerfil.textContent = obrigatorio ? "Definir nome de usuario" : "Editar nome de usuario";
+  elementos.tituloModalPerfil.textContent = obrigatorio ? "Definir nome de usuário" : "Editar nome de usuário";
   elementos.textoModalPerfil.textContent = obrigatorio
-    ? "Antes de continuar, defina o nome que sera exibido no sistema."
-    : "Atualize o nome exibido no cabecalho e nas areas do sistema.";
+    ? "Antes de continuar, defina o nome que será exibido no sistema."
+    : "Atualize o nome exibido no cabeçalho e nas áreas do sistema.";
   elementos.campoUsername.value = usernameAtual;
   ocultarMensagem(elementos.mensagemPerfil);
   elementos.modalPerfil.classList.remove("oculto");
@@ -369,8 +367,8 @@ function atualizarCabecalho() {
   }
 
   const nomeExibicao = obterNomeExibicao(perfilAtual, usuarioAtual);
-  elementos.tituloUsuario.textContent = `Ola, ${nomeExibicao}`;
-  elementos.subtituloUsuario.textContent = `Conta vinculada ao email ${usuarioAtual.email}.`;
+  elementos.tituloUsuario.textContent = `Olá, ${nomeExibicao}`;
+  elementos.subtituloUsuario.textContent = `Conta vinculada ao e-mail ${usuarioAtual.email}.`;
 }
 
 async function obterMarcadorExclusao(uid) {
@@ -453,7 +451,7 @@ async function registrarUsuario(email, senha) {
         try {
           await signOut(auth);
         } catch (erroLogout) {
-          console.error("Erro ao encerrar sessao apos falha no cadastro:", erroLogout);
+          console.error("Erro ao encerrar sessão após falha no cadastro:", erroLogout);
         }
       }
     }
@@ -472,7 +470,7 @@ async function fazerLogout() {
 
 async function reautenticarUsuarioAtual(senhaAtual) {
   if (!auth.currentUser?.email) {
-    throw new Error("Nao foi possivel identificar o email da conta atual.");
+    throw new Error("Não foi possível identificar o e-mail da conta atual.");
   }
 
   const credencial = EmailAuthProvider.credential(auth.currentUser.email, senhaAtual);
@@ -534,14 +532,14 @@ function renderizarTransacoes(transacoes) {
 
       return `
         <article class="linha-transacao">
-          <span class="pill-tipo ${classe}">${transacao.tipo === "entrada" ? "Entrada" : "Saida"}</span>
+          <span class="pill-tipo ${classe}">${transacao.tipo === "entrada" ? "Entrada" : "Saída"}</span>
           <div>
             <h4>${descricao}</h4>
             <small>${data}</small>
           </div>
           <div class="valor-transacao ${classe}">
             <p>${valor}</p>
-            <small>Registro financeiro</small>
+            <small>Lançamento financeiro</small>
           </div>
           <button class="botao-excluir" type="button" data-excluir="${id}">
             Excluir
@@ -573,7 +571,7 @@ function criarAcoesAdmin(usuario) {
         Desativar conta
       </button>
       <button class="botao-admin-acao senha" type="button" data-acao-admin="password_reset_email" data-uid="${uid}" data-email="${email}">
-        Resetar senha
+        Enviar redefinição
       </button>
       <button class="botao-admin-acao excluir" type="button" data-acao-admin="delete" data-uid="${uid}" data-email="${email}">
         Excluir conta
@@ -605,7 +603,7 @@ function renderizarUsuariosAdmin(usuarios) {
   if (!usuariosFiltrados.length) {
     elementos.listaUsuariosAdmin.innerHTML = `
       <div class="transacao-vazia">
-        <p>Nenhum usuario gerenciavel foi localizado.</p>
+        <p>Nenhum usuário gerenciável foi localizado.</p>
       </div>
     `;
     return;
@@ -636,10 +634,10 @@ function renderizarUsuariosAdmin(usuarios) {
 
 function obterMensagemContaExcluida(marcador) {
   if (marcador?.deletedBy === "self") {
-    return "Sua conta foi excluida e os dados locais foram removidos.";
+    return "Sua conta foi excluída e os dados locais foram removidos.";
   }
 
-  return "Sua conta foi excluida do sistema e o acesso foi bloqueado.";
+  return "Sua conta foi excluída do sistema e o acesso foi bloqueado.";
 }
 
 function iniciarEscutaTransacoes(uid) {
@@ -664,11 +662,11 @@ function iniciarEscutaTransacoes(uid) {
     },
     (erro) => {
       console.error("Erro ao carregar transacoes:", erro);
-      exibirMensagem(
-        elementos.mensagemApp,
-        traduzirErroFirestore(erro, "Nao foi possivel carregar as transacoes."),
-        "erro"
-      );
+        exibirMensagem(
+          elementos.mensagemApp,
+          traduzirErroFirestore(erro, "Não foi possível carregar as transações."),
+          "erro"
+        );
     }
   );
 }
@@ -685,10 +683,10 @@ function iniciarEscutaUsuariosAdmin() {
       renderizarUsuariosAdmin(usuarios);
     },
     (erro) => {
-      console.error("Erro ao carregar usuarios admin:", erro);
+      console.error("Erro ao carregar usuários no painel administrativo:", erro);
       exibirMensagem(
         elementos.mensagemApp,
-        traduzirErroFirestore(erro, "Nao foi possivel carregar a lista de usuarios."),
+        traduzirErroFirestore(erro, "Não foi possível carregar a lista de usuários."),
         "erro"
       );
     }
@@ -751,7 +749,7 @@ async function validarAcesso(user) {
     return {
       permitido: false,
       status: "pending",
-      mensagem: "Cadastro enviado com sucesso. Aguarde aprovacao do administrador."
+      mensagem: "Cadastro enviado com sucesso. Aguarde a aprovação do administrador."
     };
   }
 
@@ -793,10 +791,10 @@ function iniciarEscutaStatusUsuario(user) {
             "erro"
           );
         } catch (erroLeitura) {
-          console.error("Erro ao validar exclusao da conta:", erroLeitura);
+          console.error("Erro ao validar a exclusão da conta:", erroLeitura);
           exibirMensagem(
             elementos.mensagemAuth,
-            "Sua conta nao esta mais disponivel no sistema.",
+            "Sua conta não está mais disponível no sistema.",
             "erro"
           );
         }
@@ -820,17 +818,17 @@ function iniciarEscutaStatusUsuario(user) {
           ? "Conta desativada pelo administrador."
           : dados.status === "rejected"
             ? "Seu acesso foi negado pelo administrador."
-            : "Seu cadastro esta aguardando aprovacao do administrador.";
+            : "Seu cadastro está aguardando a aprovação do administrador.";
 
         exibirMensagem(elementos.mensagemAuth, mensagem, dados.status === "pending" ? "info" : "erro");
         await fazerLogout();
       }
     },
     async (erro) => {
-      console.error("Erro ao observar status do usuario:", erro);
+      console.error("Erro ao observar o status do usuário:", erro);
       exibirMensagem(
         elementos.mensagemAuth,
-        traduzirErroFirestore(erro, "Nao foi possivel validar o status da conta."),
+        traduzirErroFirestore(erro, "Não foi possível validar o status da conta."),
         "erro"
       );
       await fazerLogout();
@@ -883,10 +881,10 @@ async function tratarMudancaAutenticacao(user) {
 
     await prepararApp(user, validacao.perfil);
   } catch (erro) {
-    console.error("Erro ao tratar autenticacao:", erro);
+    console.error("Erro ao tratar a autenticação:", erro);
     const mensagem = erro?.code?.startsWith("auth/")
       ? traduzirErroAuth(erro.code)
-      : traduzirErroFirestore(erro, "Nao foi possivel validar seu acesso no momento.");
+      : traduzirErroFirestore(erro, "Não foi possível validar seu acesso no momento.");
 
     exibirMensagem(elementos.mensagemAuth, mensagem, "erro");
     await fazerLogout();
@@ -895,15 +893,15 @@ async function tratarMudancaAutenticacao(user) {
 
 function validarFormularioAuth(email, senha) {
   if (!email || !senha) {
-    return "Preencha todos os campos obrigatorios.";
+    return "Preencha todos os campos obrigatórios.";
   }
 
   if (!validarEmail(email)) {
-    return "Informe um email valido.";
+    return "Informe um e-mail válido.";
   }
 
   if (senha.length < 6) {
-    return "A senha deve conter no minimo 6 caracteres.";
+    return "A senha deve conter no mínimo 6 caracteres.";
   }
 
   return "";
@@ -931,14 +929,14 @@ async function enviarRegistro(evento) {
       elementos.formRegistro.reset();
       exibirMensagem(
         elementos.mensagemAuth,
-        "Cadastro enviado com sucesso. Aguarde aprovacao do administrador.",
+        "Cadastro enviado com sucesso. Aguarde a aprovação do administrador.",
         "sucesso"
       );
     } catch (erro) {
       console.error("Erro no registro:", erro);
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
-        : traduzirErroFirestore(erro, "Nao foi possivel concluir o cadastro.");
+        : traduzirErroFirestore(erro, "Não foi possível concluir o cadastro.");
       exibirMensagem(elementos.mensagemAuth, mensagem, "erro");
     }
   });
@@ -971,46 +969,17 @@ async function enviarLogin(evento) {
   });
 }
 
-async function solicitarResetSenha() {
-  ocultarMensagem(elementos.mensagemAuth);
-
-  const email = normalizarEmail(elementos.campoLoginEmail.value);
-  if (!validarEmail(email)) {
-    exibirMensagem(
-      elementos.mensagemAuth,
-      "Informe um email valido no campo de login para receber o link de redefinicao.",
-      "erro"
-    );
-    elementos.campoLoginEmail.focus();
-    return;
-  }
-
-  await executarComEstadoDeCarregamento(elementos.botaoResetSenha, "Enviando...", async () => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      exibirMensagem(
-        elementos.mensagemAuth,
-        "Email de redefinicao enviado com sucesso. Verifique sua caixa de entrada.",
-        "sucesso"
-      );
-    } catch (erro) {
-      console.error("Erro ao enviar redefinicao de senha:", erro);
-      exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
-    }
-  });
-}
-
 function validarFormularioTransacao(tipo, valor, descricao, data) {
   if (!tipo || !descricao || !data) {
-    return "Preencha todos os campos obrigatorios da transacao.";
+    return "Preencha todos os campos obrigatórios da transação.";
   }
 
   if (!["entrada", "saida"].includes(tipo)) {
-    return "Selecione um tipo de transacao valido.";
+    return "Selecione um tipo de transação válido.";
   }
 
   if (!Number.isFinite(valor) || valor <= 0) {
-    return "Informe um valor financeiro valido.";
+    return "Informe um valor financeiro válido.";
   }
 
   if (valor > LIMITE_VALOR) {
@@ -1018,15 +987,15 @@ function validarFormularioTransacao(tipo, valor, descricao, data) {
   }
 
   if (descricao.trim().length < 3) {
-    return "A descricao deve conter pelo menos 3 caracteres.";
+    return "A descrição deve conter pelo menos 3 caracteres.";
   }
 
   if (descricao.trim().length > 80) {
-    return "A descricao deve conter no maximo 80 caracteres.";
+    return "A descrição deve conter no máximo 80 caracteres.";
   }
 
   if (!validarDataIso(data)) {
-    return "Informe uma data valida para a transacao.";
+    return "Informe uma data válida para a transação.";
   }
 
   return "";
@@ -1037,7 +1006,7 @@ async function enviarTransacao(evento) {
   ocultarMensagem(elementos.mensagemApp);
 
   if (!usuarioAtual) {
-    exibirMensagem(elementos.mensagemApp, "Entre novamente para registrar uma transacao.", "erro");
+    exibirMensagem(elementos.mensagemApp, "Entre novamente para registrar uma transação.", "erro");
     return;
   }
 
@@ -1067,12 +1036,12 @@ async function enviarTransacao(evento) {
       });
 
       resetarFormularioTransacao();
-      exibirMensagem(elementos.mensagemApp, "Transacao registrada com sucesso.", "sucesso");
+      exibirMensagem(elementos.mensagemApp, "Transação registrada com sucesso.", "sucesso");
     } catch (erro) {
-      console.error("Erro ao registrar transacao:", erro);
+      console.error("Erro ao registrar transação:", erro);
       exibirMensagem(
         elementos.mensagemApp,
-        traduzirErroFirestore(erro, "Nao foi possivel registrar a transacao."),
+        traduzirErroFirestore(erro, "Não foi possível registrar a transação."),
         "erro"
       );
     }
@@ -1080,19 +1049,19 @@ async function enviarTransacao(evento) {
 }
 
 async function excluirTransacao(id, botao) {
-  if (!window.confirm("Confirma a exclusao desta transacao?")) {
+  if (!window.confirm("Confirma a exclusão desta transação?")) {
     return;
   }
 
   await executarComEstadoDeCarregamento(botao, "Excluindo...", async () => {
     try {
       await deleteDoc(doc(db, COLLECTIONS.transactions, id));
-      exibirMensagem(elementos.mensagemApp, "Transacao excluida com sucesso.", "sucesso");
+      exibirMensagem(elementos.mensagemApp, "Transação excluída com sucesso.", "sucesso");
     } catch (erro) {
-      console.error("Erro ao excluir transacao:", erro);
+      console.error("Erro ao excluir transação:", erro);
       exibirMensagem(
         elementos.mensagemApp,
-        traduzirErroFirestore(erro, "Nao foi possivel excluir a transacao."),
+        traduzirErroFirestore(erro, "Não foi possível excluir a transação."),
         "erro"
       );
     }
@@ -1139,10 +1108,10 @@ async function excluirContaUsuarioAdmin(uid, email) {
 
 function confirmarAcaoAdmin(acao) {
   const mensagens = {
-    deactivate: "Confirma a desativacao desta conta?",
-    reject: "Confirma a rejeicao deste cadastro?",
-    password_reset_email: "Deseja enviar um email para redefinicao de senha deste usuario?",
-    delete: "Confirma a exclusao desta conta e dos dados financeiros?"
+    deactivate: "Confirma a desativação desta conta?",
+    reject: "Confirma a rejeição deste cadastro?",
+    password_reset_email: "Deseja enviar um e-mail de redefinição de senha para este usuário?",
+    delete: "Confirma a exclusão desta conta e dos dados financeiros?"
   };
 
   if (!mensagens[acao]) {
@@ -1154,20 +1123,20 @@ function confirmarAcaoAdmin(acao) {
 
 async function executarAcaoAdmin(acao, uid, email) {
   if (!usuarioAtual || !ehAdminEmail(usuarioAtual.email)) {
-    throw new Error("Acao administrativa permitida apenas para o admin configurado.");
+    throw new Error("Ação administrativa permitida apenas para o administrador configurado.");
   }
 
   if (!uid || !email) {
-    throw new Error("UID ou email do usuario nao informado.");
+    throw new Error("UID ou e-mail do usuário não informado.");
   }
 
   const usuario = await obterUsuarioPorUid(uid);
   if (!usuario) {
-    throw new Error("Usuario nao encontrado para a operacao solicitada.");
+    throw new Error("Usuário não encontrado para a operação solicitada.");
   }
 
   if (ehAdminEmail(usuario.email)) {
-    throw new Error("A conta administrativa nao pode ser alterada por este painel.");
+    throw new Error("A conta administrativa não pode ser alterada por este painel.");
   }
 
   if (!confirmarAcaoAdmin(acao)) {
@@ -1176,13 +1145,13 @@ async function executarAcaoAdmin(acao, uid, email) {
 
   if (acao === "approve") {
     await aprovarUsuario(uid);
-    exibirMensagem(elementos.mensagemApp, "Usuario aprovado com sucesso.", "sucesso");
+    exibirMensagem(elementos.mensagemApp, "Usuário aprovado com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "reject") {
     await rejeitarUsuario(uid);
-    exibirMensagem(elementos.mensagemApp, "Usuario rejeitado com sucesso.", "sucesso");
+    exibirMensagem(elementos.mensagemApp, "Usuário rejeitado com sucesso.", "sucesso");
     return;
   }
 
@@ -1200,7 +1169,7 @@ async function executarAcaoAdmin(acao, uid, email) {
 
   if (acao === "password_reset_email") {
     await enviarResetSenhaPorEmail(email);
-    exibirMensagem(elementos.mensagemApp, "Email de redefinicao enviado com sucesso.", "sucesso");
+    exibirMensagem(elementos.mensagemApp, "E-mail de redefinição enviado com sucesso.", "sucesso");
     return;
   }
 
@@ -1208,34 +1177,34 @@ async function executarAcaoAdmin(acao, uid, email) {
     await excluirContaUsuarioAdmin(uid, email);
     exibirMensagem(
       elementos.mensagemApp,
-      "Conta removida do painel e novos acessos foram bloqueados para este UID.",
+      "Conta removida do painel. Novos acessos foram bloqueados para este UID.",
       "info"
     );
     return;
   }
 
-  throw new Error(`Acao administrativa desconhecida: ${acao}`);
+  throw new Error(`Ação administrativa desconhecida: ${acao}`);
 }
 
 async function excluirMinhaConta() {
   if (!usuarioAtual || !auth.currentUser || auth.currentUser.uid !== usuarioAtual.uid) {
-    exibirMensagem(elementos.mensagemApp, "Nao foi possivel validar sua sessao para excluir a conta.", "erro");
+    exibirMensagem(elementos.mensagemApp, "Não foi possível validar sua sessão para excluir a conta.", "erro");
     return;
   }
 
-  if (!window.confirm("Confirma a exclusao da sua conta e de todas as suas transacoes?")) {
+  if (!window.confirm("Confirma a exclusão da sua conta e de todas as suas transações?")) {
     return;
   }
 
   await executarComEstadoDeCarregamento(elementos.botaoExcluirMinhaConta, "Excluindo...", async () => {
     try {
-      const senhaAtual = window.prompt("Para confirmar a exclusao da conta, informe sua senha atual:");
+      const senhaAtual = window.prompt("Para confirmar a exclusão da conta, informe sua senha atual:");
       if (senhaAtual === null) {
         return;
       }
 
       if (senhaAtual.length < 6) {
-        exibirMensagem(elementos.mensagemApp, "Informe sua senha atual corretamente para excluir a conta.", "erro");
+        exibirMensagem(elementos.mensagemApp, "Informe corretamente sua senha atual para excluir a conta.", "erro");
         return;
       }
 
@@ -1244,7 +1213,7 @@ async function excluirMinhaConta() {
 
       exibirMensagem(
         elementos.mensagemAuth,
-        "Conta excluida com sucesso.",
+        "Conta excluída com sucesso.",
         "sucesso"
       );
 
@@ -1254,11 +1223,11 @@ async function excluirMinhaConta() {
       await deleteUser(auth.currentUser);
     } catch (erro) {
       exclusaoContaAtualEmAndamento = false;
-      console.error("Erro ao excluir a propria conta:", erro);
+      console.error("Erro ao excluir a própria conta:", erro);
 
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
-        : traduzirErroFirestore(erro, "Nao foi possivel excluir a conta.");
+        : traduzirErroFirestore(erro, "Não foi possível excluir a conta.");
       exibirMensagem(elementos.mensagemApp, mensagem, "erro");
     }
   });
@@ -1290,7 +1259,7 @@ async function salvarUsername(evento) {
         username,
         updatedAt: serverTimestamp()
       });
-      exibirMensagem(elementos.mensagemPerfil, "Nome de usuario atualizado com sucesso.", "sucesso");
+      exibirMensagem(elementos.mensagemPerfil, "Nome de usuário atualizado com sucesso.", "sucesso");
       exibirMensagem(elementos.mensagemApp, "Perfil atualizado com sucesso.", "sucesso");
       perfilAtual = { ...perfilAtual, username };
       atualizarCabecalho();
@@ -1298,10 +1267,10 @@ async function salvarUsername(evento) {
         fecharModalPerfil();
       }, 450);
     } catch (erro) {
-      console.error("Erro ao salvar username:", erro);
+      console.error("Erro ao salvar o nome de usuário:", erro);
       exibirMensagem(
         elementos.mensagemPerfil,
-        traduzirErroFirestore(erro, "Nao foi possivel salvar o nome de usuario."),
+        traduzirErroFirestore(erro, "Não foi possível salvar o nome de usuário."),
         "erro"
       );
     }
@@ -1321,8 +1290,6 @@ elementos.formRegistro.addEventListener("submit", enviarRegistro);
 elementos.formLogin.addEventListener("submit", enviarLogin);
 elementos.formTransacao.addEventListener("submit", enviarTransacao);
 elementos.formPerfil.addEventListener("submit", salvarUsername);
-
-elementos.botaoResetSenha.addEventListener("click", solicitarResetSenha);
 
 elementos.botaoLogout.addEventListener("click", async () => {
   await executarComEstadoDeCarregamento(elementos.botaoLogout, "Saindo...", async () => {
@@ -1379,10 +1346,10 @@ elementos.listaUsuariosAdmin.addEventListener("click", async (evento) => {
     try {
       await executarAcaoAdmin(botao.dataset.acaoAdmin, botao.dataset.uid, botao.dataset.email);
     } catch (erro) {
-      console.error("Erro ao executar acao administrativa:", erro);
+      console.error("Erro ao executar ação administrativa:", erro);
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
-        : traduzirErroFirestore(erro, "Nao foi possivel concluir a acao administrativa.");
+        : traduzirErroFirestore(erro, "Não foi possível concluir a ação administrativa.");
       exibirMensagem(elementos.mensagemApp, mensagem, "erro");
     }
   });
