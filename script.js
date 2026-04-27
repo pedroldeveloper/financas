@@ -526,6 +526,10 @@ function ordenarUsuarios(usuarios) {
   });
 }
 
+function usuarioPodeSerGerenciado(usuario) {
+  return Boolean(usuario?.email) && !ehAdminEmail(usuario.email);
+}
+
 function renderizarTransacoes(transacoes) {
   const resumo = calcularResumo(transacoes);
   elementos.saldoAtual.textContent = formatarMoeda(resumo.saldo);
@@ -568,6 +572,10 @@ function renderizarTransacoes(transacoes) {
 }
 
 function criarAcoesAdmin(usuario) {
+  if (!usuarioPodeSerGerenciado(usuario)) {
+    return "";
+  }
+
   const uid = escaparHtml(usuario.uid);
   const email = escaparHtml(usuario.email);
 
@@ -614,7 +622,7 @@ function criarAcoesAdmin(usuario) {
 
 function renderizarUsuariosAdmin(usuarios) {
   const usuariosFiltrados = ordenarUsuarios(
-    usuarios.filter((usuario) => usuario.email && !ehAdminEmail(usuario.email))
+    usuarios.filter((usuario) => usuarioPodeSerGerenciado(usuario))
   );
 
   if (!usuariosFiltrados.length) {
@@ -1155,6 +1163,10 @@ async function executarAcaoAdmin(acao, uid, email) {
 
   if (ehAdminEmail(usuario.email)) {
     throw new Error("A conta administrativa não pode ser alterada por este painel.");
+  }
+
+  if (uid === usuarioAtual.uid || normalizarEmail(email) === ADMIN_EMAIL_NORMALIZADO) {
+    throw new Error("A conta administrativa não pode ser excluída nem alterada por este painel.");
   }
 
   if (!confirmarAcaoAdmin(acao)) {
