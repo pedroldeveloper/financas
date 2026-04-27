@@ -82,12 +82,26 @@ let limpezaEscutaStatus = null;
 let modoPerfilObrigatorio = false;
 let exclusaoContaAtualEmAndamento = false;
 
+function registrarErroSeguranca(contexto, erro) {
+  const codigo = erro?.code || "sem-codigo";
+  const mensagem = erro?.message ? String(erro.message) : "sem-detalhes";
+  console.error(`[${contexto}]`, `${codigo}: ${mensagem}`);
+}
+
 function normalizarEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
 function ehAdminEmail(email) {
   return normalizarEmail(email) === ADMIN_EMAIL_NORMALIZADO;
+}
+
+function usuarioAutenticado() {
+  return auth.currentUser && usuarioAtual && auth.currentUser.uid === usuarioAtual.uid;
+}
+
+function podeAdministrar() {
+  return usuarioAutenticado() && ehAdminEmail(usuarioAtual.email);
 }
 
 function exibirMensagem(elemento, texto, tipo) {
@@ -234,6 +248,20 @@ function obterValorMonetarioDoCampo(campo) {
   return Number.isFinite(valor) ? valor : 0;
 }
 
+function limparEmailParaExibicao(email) {
+  const valor = normalizarEmail(email);
+  if (!valor.includes("@")) {
+    return valor;
+  }
+
+  const [usuario, dominio] = valor.split("@");
+  if (usuario.length <= 2) {
+    return `${usuario[0] || "*"}***@${dominio}`;
+  }
+
+  return `${usuario.slice(0, 2)}***@${dominio}`;
+}
+
 function resetarResumoFinanceiro() {
   elementos.saldoAtual.textContent = formatarMoeda(0);
   elementos.totalEntradas.textContent = formatarMoeda(0);
@@ -295,7 +323,7 @@ function traduzirErroAuth(codigo) {
 }
 
 function traduzirErroFirestore(erro, padrao) {
-  console.error("Firestore error:", erro);
+  registrarErroSeguranca("firestore", erro);
 
   if (!erro?.code) {
     return padrao;
@@ -366,7 +394,7 @@ function obterNomeExibicao(perfil, user) {
     return perfil.username.trim();
   }
 
-  return user.email;
+  return limparEmailParaExibicao(user.email);
 }
 
 function atualizarCabecalho() {
@@ -376,7 +404,7 @@ function atualizarCabecalho() {
 
   const nomeExibicao = obterNomeExibicao(perfilAtual, usuarioAtual);
   elementos.tituloUsuario.textContent = `Olá, ${nomeExibicao}`;
-  elementos.subtituloUsuario.textContent = `Conta vinculada ao e-mail ${usuarioAtual.email}.`;
+  elementos.subtituloUsuario.textContent = `Conta vinculada ao e-mail ${limparEmailParaExibicao(usuarioAtual.email)}.`;
 }
 
 function atualizarVisibilidadeAcoesDoTopo() {
@@ -464,11 +492,11 @@ async function registrarUsuario(email, senha) {
       try {
         await deleteUser(credencial.user);
       } catch (erroLimpeza) {
-        console.error("Erro ao desfazer cadastro incompleto:", erroLimpeza);
+        registrarErroSeguranca("desfazer-cadastro-incompleto", erroLimpeza);
         try {
           await signOut(auth);
         } catch (erroLogout) {
-          console.error("Erro ao encerrar sessão após falha no cadastro:", erroLogout);
+          registrarErroSeguranca("encerrar-sessao-apos-falha-cadastro", erroLogout);
         }
       }
     }
@@ -686,12 +714,12 @@ function iniciarEscutaTransacoes(uid) {
       renderizarTransacoes(transacoes);
     },
     (erro) => {
-      console.error("Erro ao carregar transacoes:", erro);
-        exibirMensagem(
-          elementos.mensagemApp,
-          traduzirErroFirestore(erro, "Não foi possível carregar as transações."),
-          "erro"
-        );
+      registrarErroSeguranca("carregar-transacoes", erro);
+      exibirMensagem(
+        elementos.mensagemApp,
+        traduzirErroFirestore(erro, "Não foi possível carregar as transações."),
+        "erro"
+      );
     }
   );
 }
@@ -708,7 +736,7 @@ function iniciarEscutaUsuariosAdmin() {
       renderizarUsuariosAdmin(usuarios);
     },
     (erro) => {
-      console.error("Erro ao carregar usuários no painel administrativo:", erro);
+      registrarErroSeguranca("carregar-usuarios-admin", erro);
       exibirMensagem(
         elementos.mensagemApp,
         traduzirErroFirestore(erro, "Não foi possível carregar a lista de usuários."),
@@ -719,6 +747,10 @@ function iniciarEscutaUsuariosAdmin() {
 }
 
 async function excluirTransacoesDoUsuario(uid) {
+  if (!uid) {
+    throw new Error("UID do usuário não informado para exclusão das transações.");
+  }
+
   const consulta = query(collection(db, COLLECTIONS.transactions), where("uid", "==", uid));
   const snapshot = await getDocs(consulta);
   await Promise.all(snapshot.docs.map((item) => deleteDoc(doc(db, COLLECTIONS.transactions, item.id))));
@@ -816,7 +848,7 @@ function iniciarEscutaStatusUsuario(user) {
             "erro"
           );
         } catch (erroLeitura) {
-          console.error("Erro ao validar a exclusão da conta:", erroLeitura);
+          registrarErroSeguranca("validar-exclusao-conta", erroLeitura);
           exibirMensagem(
             elementos.mensagemAuth,
             "Sua conta não está mais disponível no sistema.",
@@ -850,7 +882,7 @@ function iniciarEscutaStatusUsuario(user) {
       }
     },
     async (erro) => {
-      console.error("Erro ao observar o status do usuário:", erro);
+      registrarErroSeguranca("observar-status-usuario", erro);
       exibirMensagem(
         elementos.mensagemAuth,
         traduzirErroFirestore(erro, "Não foi possível validar o status da conta."),
@@ -907,7 +939,7 @@ async function tratarMudancaAutenticacao(user) {
 
     await prepararApp(user, validacao.perfil);
   } catch (erro) {
-    console.error("Erro ao tratar a autenticação:", erro);
+    registrarErroSeguranca("tratar-autenticacao", erro);
     const mensagem = erro?.code?.startsWith("auth/")
       ? traduzirErroAuth(erro.code)
       : traduzirErroFirestore(erro, "Não foi possível validar seu acesso no momento.");
@@ -959,7 +991,7 @@ async function enviarRegistro(evento) {
         "sucesso"
       );
     } catch (erro) {
-      console.error("Erro no registro:", erro);
+      registrarErroSeguranca("registro", erro);
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
         : traduzirErroFirestore(erro, "Não foi possível concluir o cadastro.");
@@ -989,7 +1021,7 @@ async function enviarLogin(evento) {
       await fazerLogin(email, senha);
       elementos.formLogin.reset();
     } catch (erro) {
-      console.error("Erro no login:", erro);
+      registrarErroSeguranca("login", erro);
       exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
     }
   });
@@ -1031,7 +1063,7 @@ async function enviarTransacao(evento) {
   evento.preventDefault();
   ocultarMensagem(elementos.mensagemApp);
 
-  if (!usuarioAtual) {
+  if (!usuarioAutenticado()) {
     exibirMensagem(elementos.mensagemApp, "Entre novamente para registrar uma transação.", "erro");
     return;
   }
@@ -1064,7 +1096,7 @@ async function enviarTransacao(evento) {
       resetarFormularioTransacao();
       exibirMensagem(elementos.mensagemApp, "Transação registrada com sucesso.", "sucesso");
     } catch (erro) {
-      console.error("Erro ao registrar transação:", erro);
+      registrarErroSeguranca("registrar-transacao", erro);
       exibirMensagem(
         elementos.mensagemApp,
         traduzirErroFirestore(erro, "Não foi possível registrar a transação."),
@@ -1074,6 +1106,24 @@ async function enviarTransacao(evento) {
   });
 }
 
+async function validarPermissaoDeExclusaoTransacao(id) {
+  const referencia = doc(db, COLLECTIONS.transactions, id);
+  const snapshotTransacao = await getDoc(referencia);
+
+  if (!snapshotTransacao.exists()) {
+    throw new Error("Transação não encontrada.");
+  }
+
+  const transacao = snapshotTransacao.data();
+  const usuarioPodeExcluir = transacao.uid === usuarioAtual?.uid || podeAdministrar();
+
+  if (!usuarioPodeExcluir) {
+    throw new Error("Você não tem permissão para excluir esta transação.");
+  }
+
+  return referencia;
+}
+
 async function excluirTransacao(id, botao) {
   if (!window.confirm("Confirma a exclusão desta transação?")) {
     return;
@@ -1081,10 +1131,11 @@ async function excluirTransacao(id, botao) {
 
   await executarComEstadoDeCarregamento(botao, "Excluindo...", async () => {
     try {
-      await deleteDoc(doc(db, COLLECTIONS.transactions, id));
+      const referencia = await validarPermissaoDeExclusaoTransacao(id);
+      await deleteDoc(referencia);
       exibirMensagem(elementos.mensagemApp, "Transação excluída com sucesso.", "sucesso");
     } catch (erro) {
-      console.error("Erro ao excluir transação:", erro);
+      registrarErroSeguranca("excluir-transacao", erro);
       exibirMensagem(
         elementos.mensagemApp,
         traduzirErroFirestore(erro, "Não foi possível excluir a transação."),
@@ -1148,7 +1199,7 @@ function confirmarAcaoAdmin(acao) {
 }
 
 async function executarAcaoAdmin(acao, uid, email) {
-  if (!usuarioAtual || !ehAdminEmail(usuarioAtual.email)) {
+  if (!podeAdministrar()) {
     throw new Error("Ação administrativa permitida apenas para o administrador configurado.");
   }
 
@@ -1217,7 +1268,7 @@ async function executarAcaoAdmin(acao, uid, email) {
 }
 
 async function excluirMinhaConta() {
-  if (!usuarioAtual || !auth.currentUser || auth.currentUser.uid !== usuarioAtual.uid) {
+  if (!usuarioAutenticado()) {
     exibirMensagem(elementos.mensagemApp, "Não foi possível validar sua sessão para excluir a conta.", "erro");
     return;
   }
@@ -1258,7 +1309,7 @@ async function excluirMinhaConta() {
       await deleteUser(auth.currentUser);
     } catch (erro) {
       exclusaoContaAtualEmAndamento = false;
-      console.error("Erro ao excluir a própria conta:", erro);
+      registrarErroSeguranca("excluir-propria-conta", erro);
 
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
@@ -1272,7 +1323,7 @@ async function salvarUsername(evento) {
   evento.preventDefault();
   ocultarMensagem(elementos.mensagemPerfil);
 
-  if (!usuarioAtual) {
+  if (!usuarioAutenticado()) {
     exibirMensagem(elementos.mensagemPerfil, "Entre novamente para atualizar o perfil.", "erro");
     return;
   }
@@ -1302,7 +1353,7 @@ async function salvarUsername(evento) {
         fecharModalPerfil();
       }, 450);
     } catch (erro) {
-      console.error("Erro ao salvar o nome de usuário:", erro);
+      registrarErroSeguranca("salvar-username", erro);
       exibirMensagem(
         elementos.mensagemPerfil,
         traduzirErroFirestore(erro, "Não foi possível salvar o nome de usuário."),
@@ -1331,7 +1382,7 @@ elementos.botaoLogout.addEventListener("click", async () => {
     try {
       await fazerLogout();
     } catch (erro) {
-      console.error("Erro ao sair:", erro);
+      registrarErroSeguranca("logout", erro);
       exibirMensagem(elementos.mensagemApp, traduzirErroAuth(erro.code), "erro");
     }
   });
@@ -1381,7 +1432,7 @@ elementos.listaUsuariosAdmin.addEventListener("click", async (evento) => {
     try {
       await executarAcaoAdmin(botao.dataset.acaoAdmin, botao.dataset.uid, botao.dataset.email);
     } catch (erro) {
-      console.error("Erro ao executar ação administrativa:", erro);
+      registrarErroSeguranca("acao-administrativa", erro);
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
         : traduzirErroFirestore(erro, "Não foi possível concluir a ação administrativa.");
