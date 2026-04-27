@@ -15,7 +15,7 @@ const firebaseConfig = {
   appId: "1:1096863796790:web:bc2d556122233c8bd7d297"
 };
 
-export const ADMIN_EMAIL = "ordepluissantosfrancisco@email.com";
+export const ADMIN_EMAIL = "ordepluissantosfrancisco@gmail.com";
 
 const app = initializeApp(firebaseConfig);
 
