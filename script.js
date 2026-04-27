@@ -48,11 +48,17 @@ const elementos = {
   mensagemAuth: document.getElementById("mensagem-auth"),
   mensagemApp: document.getElementById("mensagem-app"),
   mensagemPerfil: document.getElementById("mensagem-perfil"),
-  formLogin: document.getElementById("form-login"),
-  formRegistro: document.getElementById("form-registro"),
+  rotuloAuth: document.getElementById("rotulo-auth"),
+  tituloAuth: document.getElementById("titulo-auth"),
+  textoAuth: document.getElementById("texto-auth"),
+  botaoModoLogin: document.getElementById("botao-modo-login"),
+  botaoModoRegistro: document.getElementById("botao-modo-registro"),
+  formAuth: document.getElementById("form-auth"),
   formTransacao: document.getElementById("form-transacao"),
   formPerfil: document.getElementById("form-perfil"),
   campoLoginEmail: document.getElementById("login-email"),
+  campoLoginSenha: document.getElementById("login-senha"),
+  botaoSubmitAuth: document.getElementById("botao-submit-auth"),
   botaoLogout: document.getElementById("botao-logout"),
   botaoEditarPerfil: document.getElementById("botao-editar-perfil"),
   botaoExcluirMinhaConta: document.getElementById("botao-excluir-minha-conta"),
@@ -81,6 +87,8 @@ let limpezaEscutaUsuarios = null;
 let limpezaEscutaStatus = null;
 let modoPerfilObrigatorio = false;
 let exclusaoContaAtualEmAndamento = false;
+let modoAuthAtual = "login";
+let cadastroEmAndamento = false;
 
 function registrarErroSeguranca(contexto, erro) {
   const codigo = erro?.code || "sem-codigo";
@@ -320,6 +328,33 @@ function traduzirErroAuth(codigo) {
   };
 
   return mapa[codigo] || "Ocorreu um erro inesperado. Verifique a configuração do serviço.";
+}
+
+function atualizarInterfaceAuth() {
+  const emModoLogin = modoAuthAtual === "login";
+
+  elementos.rotuloAuth.textContent = emModoLogin ? "Entrar" : "Criar conta";
+  elementos.tituloAuth.textContent = emModoLogin ? "Acesse sua conta" : "Crie sua conta";
+  elementos.textoAuth.textContent = emModoLogin
+    ? "Informe seu e-mail e sua senha para continuar."
+    : "Preencha os dados abaixo para solicitar acesso ao sistema.";
+  elementos.botaoSubmitAuth.textContent = emModoLogin ? "Entrar" : "Criar conta";
+  elementos.campoLoginSenha.placeholder = emModoLogin ? "Digite sua senha" : "Crie uma senha";
+  elementos.botaoModoLogin.classList.toggle("ativo", emModoLogin);
+  elementos.botaoModoRegistro.classList.toggle("ativo", !emModoLogin);
+  elementos.botaoModoLogin.setAttribute("aria-pressed", emModoLogin ? "true" : "false");
+  elementos.botaoModoRegistro.setAttribute("aria-pressed", emModoLogin ? "false" : "true");
+}
+
+function definirModoAuth(modo) {
+  if (!["login", "registro"].includes(modo) || modoAuthAtual === modo) {
+    return;
+  }
+
+  modoAuthAtual = modo;
+  ocultarMensagem(elementos.mensagemAuth);
+  elementos.formAuth.reset();
+  atualizarInterfaceAuth();
 }
 
 function traduzirErroFirestore(erro, padrao) {
@@ -917,6 +952,10 @@ async function prepararApp(user, perfil) {
 }
 
 async function tratarMudancaAutenticacao(user) {
+  if (cadastroEmAndamento && user) {
+    return;
+  }
+
   limparEscutas();
 
   if (!user) {
@@ -969,7 +1008,7 @@ async function enviarRegistro(evento) {
   evento.preventDefault();
   ocultarMensagem(elementos.mensagemAuth);
 
-  const dados = new FormData(elementos.formRegistro);
+  const dados = new FormData(elementos.formAuth);
   const email = normalizarEmail(dados.get("email"));
   const senha = String(dados.get("senha") || "");
   const erroValidacao = validarFormularioAuth(email, senha);
@@ -979,50 +1018,36 @@ async function enviarRegistro(evento) {
     return;
   }
 
-  const botao = evento.submitter || elementos.formRegistro.querySelector("button[type='submit']");
+  const botao = evento.submitter || elementos.botaoSubmitAuth;
+  const emModoLogin = modoAuthAtual === "login";
 
-  await executarComEstadoDeCarregamento(botao, "Registrando...", async () => {
+  await executarComEstadoDeCarregamento(botao, emModoLogin ? "Entrando..." : "Criando conta...", async () => {
     try {
+      if (emModoLogin) {
+        await fazerLogin(email, senha);
+        elementos.formAuth.reset();
+        return;
+      }
+
+      cadastroEmAndamento = true;
       await registrarUsuario(email, senha);
-      elementos.formRegistro.reset();
+      elementos.formAuth.reset();
+      definirModoAuth("login");
       exibirMensagem(
         elementos.mensagemAuth,
-        "Cadastro enviado com sucesso. Aguarde a aprovação do administrador.",
+        "Conta criada com sucesso. Aguarde aprovação do administrador.",
         "sucesso"
       );
     } catch (erro) {
-      registrarErroSeguranca("registro", erro);
+      registrarErroSeguranca(emModoLogin ? "login" : "registro", erro);
       const mensagem = erro?.code?.startsWith("auth/")
         ? traduzirErroAuth(erro.code)
-        : traduzirErroFirestore(erro, "Não foi possível concluir o cadastro.");
+        : traduzirErroFirestore(erro, emModoLogin ? "Não foi possível concluir o login." : "Não foi possível concluir o cadastro.");
       exibirMensagem(elementos.mensagemAuth, mensagem, "erro");
-    }
-  });
-}
-
-async function enviarLogin(evento) {
-  evento.preventDefault();
-  ocultarMensagem(elementos.mensagemAuth);
-
-  const dados = new FormData(elementos.formLogin);
-  const email = normalizarEmail(dados.get("email"));
-  const senha = String(dados.get("senha") || "");
-  const erroValidacao = validarFormularioAuth(email, senha);
-
-  if (erroValidacao) {
-    exibirMensagem(elementos.mensagemAuth, erroValidacao, "erro");
-    return;
-  }
-
-  const botao = evento.submitter || elementos.formLogin.querySelector("button[type='submit']");
-
-  await executarComEstadoDeCarregamento(botao, "Entrando...", async () => {
-    try {
-      await fazerLogin(email, senha);
-      elementos.formLogin.reset();
-    } catch (erro) {
-      registrarErroSeguranca("login", erro);
-      exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
+    } finally {
+      if (!emModoLogin) {
+        cadastroEmAndamento = false;
+      }
     }
   });
 }
@@ -1372,10 +1397,17 @@ function abrirEdicaoPerfil() {
   abrirModalPerfil(false, perfilAtual?.username || "");
 }
 
-elementos.formRegistro.addEventListener("submit", enviarRegistro);
-elementos.formLogin.addEventListener("submit", enviarLogin);
+elementos.formAuth.addEventListener("submit", enviarRegistro);
 elementos.formTransacao.addEventListener("submit", enviarTransacao);
 elementos.formPerfil.addEventListener("submit", salvarUsername);
+
+elementos.botaoModoLogin.addEventListener("click", () => {
+  definirModoAuth("login");
+});
+
+elementos.botaoModoRegistro.addEventListener("click", () => {
+  definirModoAuth("registro");
+});
 
 elementos.botaoLogout.addEventListener("click", async () => {
   await executarComEstadoDeCarregamento(elementos.botaoLogout, "Saindo...", async () => {
@@ -1443,4 +1475,5 @@ elementos.listaUsuariosAdmin.addEventListener("click", async (evento) => {
 
 definirDataPadrao();
 resetarResumoFinanceiro();
+atualizarInterfaceAuth();
 onAuthStateChanged(auth, tratarMudancaAutenticacao);
