@@ -262,6 +262,7 @@ function mostrarTelaAuth() {
   exclusaoContaAtualEmAndamento = false;
   limparEscutas();
   fecharModalPerfil();
+  atualizarVisibilidadeAcoesDoTopo();
   resetarResumoFinanceiro();
   resetarPainelAdmin();
   resetarFormularioTransacao();
@@ -300,8 +301,15 @@ function traduzirErroFirestore(erro, padrao) {
     return padrao;
   }
 
+  if (erro.code === "permission-denied") {
+    if (ehAdminEmail(auth.currentUser?.email || usuarioAtual?.email)) {
+      return `Permissão negada pelo Firestore. Publique as regras do README e confirme se o e-mail de admin nas regras é exatamente ${ADMIN_EMAIL}.`;
+    }
+
+    return "Permissão negada pelo Firestore. Verifique as regras do projeto.";
+  }
+
   const mapa = {
-    "permission-denied": "Permissão negada pelo Firestore. Verifique as regras do projeto.",
     unavailable: "Serviço indisponível no momento. Tente novamente em instantes.",
     unauthenticated: "Sessão inválida. Entre novamente para continuar.",
     "not-found": "Registro não encontrado.",
@@ -369,6 +377,15 @@ function atualizarCabecalho() {
   const nomeExibicao = obterNomeExibicao(perfilAtual, usuarioAtual);
   elementos.tituloUsuario.textContent = `Olá, ${nomeExibicao}`;
   elementos.subtituloUsuario.textContent = `Conta vinculada ao e-mail ${usuarioAtual.email}.`;
+}
+
+function atualizarVisibilidadeAcoesDoTopo() {
+  if (!usuarioAtual) {
+    elementos.botaoExcluirMinhaConta.classList.remove("oculto");
+    return;
+  }
+
+  elementos.botaoExcluirMinhaConta.classList.toggle("oculto", ehAdminEmail(usuarioAtual.email));
 }
 
 async function obterMarcadorExclusao(uid) {
@@ -840,6 +857,7 @@ async function prepararApp(user, perfil) {
   usuarioAtual = user;
   perfilAtual = perfil;
   atualizarCabecalho();
+  atualizarVisibilidadeAcoesDoTopo();
   ocultarMensagem(elementos.mensagemApp);
   resetarFormularioTransacao();
   mostrarTelaApp();
@@ -1189,6 +1207,11 @@ async function executarAcaoAdmin(acao, uid, email) {
 async function excluirMinhaConta() {
   if (!usuarioAtual || !auth.currentUser || auth.currentUser.uid !== usuarioAtual.uid) {
     exibirMensagem(elementos.mensagemApp, "Não foi possível validar sua sessão para excluir a conta.", "erro");
+    return;
+  }
+
+  if (ehAdminEmail(usuarioAtual.email)) {
+    exibirMensagem(elementos.mensagemApp, "A conta administrativa não pode ser excluída por esta interface.", "erro");
     return;
   }
 
