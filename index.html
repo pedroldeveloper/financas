@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Atlas Caixa Firebase</title>
+  <title>Atlas Caixa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,30 +13,26 @@
   <div class="pagina">
     <section id="tela-auth" class="hero-auth">
       <div class="hero-conteudo">
-        <p class="rotulo">Atlas Caixa Firebase</p>
-        <h1>Autenticação real com Firebase e finanças sincronizadas na nuvem.</h1>
+        <p class="rotulo">Atlas Caixa</p>
+        <h1>Gestão financeira com acesso controlado.</h1>
         <p class="hero-texto">
-          Este projeto usa Firebase Authentication e Cloud Firestore para criar contas,
-          aprovar acessos e salvar transações por usuário sem backend próprio.
+          Cadastre sua conta, aguarde aprovação e acompanhe seus lançamentos em um ambiente centralizado.
         </p>
 
         <div class="grade-destaques">
           <article class="destaque-card">
-            <strong>Login real</strong>
-            <span>Cadastro e acesso por email e senha com Firebase Authentication.</span>
+            <strong>Acesso controlado</strong>
+            <span>Somente usuários autorizados podem utilizar o sistema.</span>
           </article>
           <article class="destaque-card">
-            <strong>Dados online</strong>
-            <span>Transações e status de usuários ficam no Firestore e funcionam em qualquer dispositivo.</span>
+            <strong>Dados sincronizados</strong>
+            <span>As informações ficam disponíveis após o login em qualquer dispositivo autorizado.</span>
           </article>
         </div>
 
         <div class="aviso-card">
-          <span class="selo-aviso">Aviso importante</span>
-          <p>
-            Este projeto é educacional. A segurança depende da configuração correta do Firebase,
-            das regras do Firestore e do email definido como administrador.
-          </p>
+          <span class="selo-aviso">Aviso</span>
+          <p>O uso do sistema depende da configuração correta das permissões e do acesso administrativo.</p>
         </div>
       </div>
 
@@ -44,18 +40,18 @@
         <div class="auth-card">
           <div class="cabecalho-card">
             <p class="rotulo">Entrar</p>
-            <h2>Acessar conta</h2>
-            <p>Somente contas aprovadas conseguem usar o sistema financeiro.</p>
+            <h2>Acesso à conta</h2>
+            <p>Informe seu email e sua senha.</p>
           </div>
 
           <div id="mensagem-auth" class="mensagem oculto" aria-live="polite"></div>
 
-          <form id="form-login" class="formulario" autocomplete="off">
+          <form id="form-login" class="formulario" autocomplete="off" novalidate>
             <label for="login-email">Email</label>
             <input id="login-email" name="email" type="email" placeholder="voce@email.com" required>
 
             <label for="login-senha">Senha</label>
-            <input id="login-senha" name="senha" type="password" placeholder="Digite sua senha" required>
+            <input id="login-senha" name="senha" type="password" placeholder="Digite sua senha" required minlength="6">
 
             <button class="botao-principal" type="submit">Entrar</button>
           </form>
@@ -64,16 +60,16 @@
         <div class="auth-card">
           <div class="cabecalho-card">
             <p class="rotulo">Cadastro</p>
-            <h2>Criar nova conta</h2>
-            <p>No registro, a conta é criada no Firebase e começa com status pendente.</p>
+            <h2>Solicitar acesso</h2>
+            <p>O acesso será liberado após validação administrativa.</p>
           </div>
 
-          <form id="form-registro" class="formulario" autocomplete="off">
+          <form id="form-registro" class="formulario" autocomplete="off" novalidate>
             <label for="registro-email">Email</label>
             <input id="registro-email" name="email" type="email" placeholder="voce@email.com" required>
 
             <label for="registro-senha">Senha</label>
-            <input id="registro-senha" name="senha" type="password" placeholder="Crie uma senha" required>
+            <input id="registro-senha" name="senha" type="password" placeholder="Crie uma senha" required minlength="6">
 
             <button class="botao-secundario" type="submit">Registrar conta</button>
           </form>
@@ -83,46 +79,48 @@
 
     <section id="tela-app" class="app-shell oculto">
       <header class="topo-app">
-        <div>
+        <div class="topo-identidade">
           <p class="rotulo">Painel financeiro</p>
           <h2 id="titulo-usuario">Olá</h2>
-          <p class="texto-suave">Seus dados são carregados diretamente do Firebase.</p>
+          <p id="subtitulo-usuario" class="texto-suave">Os dados exibidos abaixo estão vinculados ao usuário autenticado.</p>
         </div>
-        <button id="botao-logout" class="botao-secundario" type="button">Sair</button>
+
+        <div class="acoes-topo">
+          <button id="botao-editar-perfil" class="botao-secundario" type="button">Editar perfil</button>
+          <button id="botao-logout" class="botao-secundario" type="button">Sair</button>
+        </div>
       </header>
 
       <div id="mensagem-app" class="mensagem oculto" aria-live="polite"></div>
 
-      <section class="grade-app">
-        <article class="cartao-resumo">
-          <div class="cabecalho-resumo">
-            <div>
-              <p class="rotulo-cartao">Saldo atual</p>
-              <h3 id="saldo-atual">R$ 0,00</h3>
-            </div>
-            <span class="selo-status">Sincronizado</span>
-          </div>
+      <section class="bloco-saldo-principal">
+        <div class="saldo-centro">
+          <p class="rotulo-cartao">Saldo total</p>
+          <h3 id="saldo-atual">R$ 0,00</h3>
+          <p class="texto-saldo">Resumo consolidado das movimentações registradas.</p>
+        </div>
 
-          <div class="mini-resumos">
-            <div class="mini-card">
-              <span>Entradas</span>
-              <strong id="total-entradas">R$ 0,00</strong>
-            </div>
-            <div class="mini-card">
-              <span>Saídas</span>
-              <strong id="total-saidas">R$ 0,00</strong>
-            </div>
-          </div>
-        </article>
+        <div class="faixa-resumos">
+          <article class="mini-card destaque-entrada">
+            <span>Total de entradas</span>
+            <strong id="total-entradas">R$ 0,00</strong>
+          </article>
+          <article class="mini-card destaque-saida">
+            <span>Total de saídas</span>
+            <strong id="total-saidas">R$ 0,00</strong>
+          </article>
+        </div>
+      </section>
 
+      <section class="secao-transacoes">
         <article class="cartao-formulario">
           <div class="cabecalho-card interno">
             <p class="rotulo">Nova transação</p>
-            <h3>Adicionar lançamento</h3>
-            <p>Os lançamentos ficam salvos na coleção <code>transactions</code> do Firestore.</p>
+            <h3>Registrar lançamento</h3>
+            <p>Preencha os dados abaixo para incluir uma entrada ou saída.</p>
           </div>
 
-          <form id="form-transacao" class="formulario" autocomplete="off">
+          <form id="form-transacao" class="formulario" autocomplete="off" novalidate>
             <label for="transacao-tipo">Tipo</label>
             <select id="transacao-tipo" name="tipo" required>
               <option value="entrada">Entrada</option>
@@ -130,10 +128,25 @@
             </select>
 
             <label for="transacao-valor">Valor</label>
-            <input id="transacao-valor" name="valor" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+            <input
+              id="transacao-valor"
+              name="valor"
+              type="text"
+              inputmode="numeric"
+              placeholder="R$ 0,00"
+              required
+              maxlength="22"
+            >
 
             <label for="transacao-descricao">Descrição</label>
-            <input id="transacao-descricao" name="descricao" type="text" placeholder="Ex.: salário, aluguel, mercado" required>
+            <input
+              id="transacao-descricao"
+              name="descricao"
+              type="text"
+              placeholder="Informe a descrição da transação"
+              required
+              maxlength="80"
+            >
 
             <label for="transacao-data">Data</label>
             <input id="transacao-data" name="data" type="date" required>
@@ -141,31 +154,74 @@
             <button class="botao-principal" type="submit">Salvar transação</button>
           </form>
         </article>
-      </section>
 
-      <section class="cartao-lista">
-        <div class="cabecalho-card interno">
-          <p class="rotulo">Histórico</p>
-          <h3>Transações do usuário</h3>
-          <p>Cada conta visualiza apenas os próprios documentos no Firestore.</p>
-        </div>
-        <div id="lista-transacoes" class="lista-transacoes"></div>
+        <article class="cartao-lista">
+          <div class="cabecalho-card interno">
+            <p class="rotulo">Histórico</p>
+            <h3>Transações registradas</h3>
+            <p>Consulte, acompanhe e remova lançamentos quando necessário.</p>
+          </div>
+          <div id="lista-transacoes" class="lista-transacoes"></div>
+        </article>
       </section>
 
       <section id="secao-admin" class="cartao-admin oculto">
         <div class="cabecalho-card interno">
           <p class="rotulo">Administração</p>
           <h3>Painel administrativo</h3>
-          <p>Disponível apenas para o email configurado como administrador em <code>firebase.js</code>.</p>
+          <p>Controle de usuários e histórico de ações administrativas.</p>
         </div>
 
-        <div class="grade-admin-cabecalho">
-          <span>Email</span>
-          <span>Status</span>
-          <span>Ações</span>
+        <div class="admin-grade">
+          <article class="admin-bloco">
+            <div class="grade-admin-cabecalho">
+              <span>Usuário</span>
+              <span>Status</span>
+              <span>Ações</span>
+            </div>
+            <div id="lista-usuarios-admin" class="lista-usuarios-admin"></div>
+          </article>
+
+          <article class="admin-bloco">
+            <div class="cabecalho-card interno pequeno">
+              <p class="rotulo">Logs</p>
+              <h3>Registro de ações</h3>
+              <p>Ações mais recentes executadas no painel administrativo.</p>
+            </div>
+            <div id="lista-logs-admin" class="lista-logs-admin"></div>
+          </article>
         </div>
-        <div id="lista-usuarios-admin" class="lista-usuarios-admin"></div>
       </section>
+    </section>
+  </div>
+
+  <div id="modal-perfil" class="modal-perfil oculto" aria-hidden="true">
+    <div class="modal-fundo"></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-perfil">
+      <div class="cabecalho-card interno">
+        <p class="rotulo">Perfil</p>
+        <h3 id="titulo-modal-perfil">Definir nome de usuário</h3>
+        <p id="texto-modal-perfil">Escolha o nome que será exibido no sistema.</p>
+      </div>
+
+      <div id="mensagem-perfil" class="mensagem oculto" aria-live="polite"></div>
+
+      <form id="form-perfil" class="formulario" autocomplete="off" novalidate>
+        <label for="perfil-username">Nome de usuário</label>
+        <input
+          id="perfil-username"
+          name="username"
+          type="text"
+          placeholder="Defina seu nome de usuário"
+          maxlength="30"
+          required
+        >
+
+        <div class="acoes-modal">
+          <button id="botao-cancelar-perfil" class="botao-secundario" type="button">Cancelar</button>
+          <button class="botao-principal" type="submit">Salvar perfil</button>
+        </div>
+      </form>
     </section>
   </div>
 
