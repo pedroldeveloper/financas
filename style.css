@@ -13,6 +13,7 @@
   --vermelho: #ff978c;
   --laranja: #f1c46d;
   --cinza: #d8d2c5;
+  --azul: #86b8ff;
   --sombra: 0 32px 90px rgba(0, 0, 0, 0.45);
 }
 
@@ -50,10 +51,12 @@ code {
 .hero-auth,
 .app-shell,
 .auth-card,
-.cartao-resumo,
+.bloco-saldo-principal,
 .cartao-formulario,
 .cartao-lista,
-.cartao-admin {
+.cartao-admin,
+.modal-card,
+.admin-bloco {
   position: relative;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(10, 10, 10, 0.98));
@@ -64,10 +67,12 @@ code {
 .hero-auth::before,
 .app-shell::before,
 .auth-card::before,
-.cartao-resumo::before,
+.bloco-saldo-principal::before,
 .cartao-formulario::before,
 .cartao-lista::before,
-.cartao-admin::before {
+.cartao-admin::before,
+.modal-card::before,
+.admin-bloco::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -77,7 +82,7 @@ code {
 
 .hero-auth {
   display: grid;
-  grid-template-columns: 1.02fr 0.98fr;
+  grid-template-columns: 1fr 1fr;
   gap: 28px;
   padding: 30px;
   border-radius: 30px;
@@ -85,16 +90,19 @@ code {
 
 .hero-conteudo,
 .painel-auth,
-.app-shell {
+.app-shell,
+.modal-card,
+.admin-bloco {
   position: relative;
   z-index: 1;
+  min-width: 0;
 }
 
 .hero-conteudo {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 24px;
+  gap: 22px;
 }
 
 .rotulo {
@@ -118,15 +126,16 @@ code {
 .cabecalho-card h2,
 .cabecalho-card h3,
 .topo-app h2,
-.cartao-resumo h3 {
+.bloco-saldo-principal h3 {
   margin: 0;
   font-family: "Sora", sans-serif;
+  letter-spacing: 0;
 }
 
 .hero-conteudo h1 {
-  max-width: 12ch;
-  font-size: clamp(2.5rem, 5vw, 5rem);
-  line-height: 0.95;
+  max-width: 11ch;
+  font-size: clamp(2.2rem, 5vw, 4.6rem);
+  line-height: 0.97;
 }
 
 .hero-texto,
@@ -135,7 +144,9 @@ code {
 .aviso-card p,
 .texto-suave,
 .linha-transacao small,
-.linha-admin small {
+.linha-admin small,
+.texto-saldo,
+.linha-log small {
   color: var(--texto-suave);
 }
 
@@ -149,7 +160,8 @@ code {
 .aviso-card,
 .mini-card,
 .mensagem,
-.transacao-vazia {
+.transacao-vazia,
+.linha-log {
   border-radius: 20px;
 }
 
@@ -189,10 +201,12 @@ code {
 
 .auth-card,
 .app-shell,
-.cartao-resumo,
+.bloco-saldo-principal,
 .cartao-formulario,
 .cartao-lista,
-.cartao-admin {
+.cartao-admin,
+.modal-card,
+.admin-bloco {
   padding: 24px;
   border-radius: 26px;
 }
@@ -203,6 +217,10 @@ code {
 
 .cabecalho-card.interno {
   margin-bottom: 14px;
+}
+
+.cabecalho-card.pequeno {
+  margin-bottom: 12px;
 }
 
 .cabecalho-card p {
@@ -251,7 +269,7 @@ code {
   border: 0;
   cursor: pointer;
   font-weight: 800;
-  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease, opacity 180ms ease;
 }
 
 .botao-principal {
@@ -267,10 +285,29 @@ code {
   border: 1px solid rgba(212, 175, 55, 0.18);
 }
 
-.botao-excluir {
-  background: rgba(255, 151, 140, 0.08);
+.botao-admin-acao.rejeitar {
   color: var(--vermelho);
-  border: 1px solid rgba(255, 151, 140, 0.14);
+  border-color: rgba(255, 151, 140, 0.18);
+  background: rgba(255, 151, 140, 0.08);
+}
+
+.botao-admin-acao.resetar {
+  color: var(--azul);
+  border-color: rgba(134, 184, 255, 0.18);
+  background: rgba(134, 184, 255, 0.08);
+}
+
+.botao-admin-acao.senha {
+  color: var(--azul);
+  border-color: rgba(134, 184, 255, 0.18);
+  background: rgba(134, 184, 255, 0.08);
+}
+
+.botao-admin-acao.excluir,
+.botao-excluir {
+  color: var(--vermelho);
+  border-color: rgba(255, 151, 140, 0.18);
+  background: rgba(255, 151, 140, 0.08);
 }
 
 .botao-principal:hover,
@@ -286,9 +323,11 @@ code {
 
 .mensagem {
   margin-bottom: 16px;
-  padding: 14px 16px;
+  padding: 15px 16px;
   border: 1px solid transparent;
   font-size: 0.95rem;
+  line-height: 1.45;
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
 .mensagem.info {
@@ -299,8 +338,9 @@ code {
 
 .mensagem.sucesso {
   color: #9ce6b5;
-  background: rgba(120, 212, 157, 0.1);
-  border-color: rgba(120, 212, 157, 0.18);
+  background: rgba(120, 212, 157, 0.12);
+  border-color: rgba(120, 212, 157, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(120, 212, 157, 0.08);
 }
 
 .mensagem.erro {
@@ -311,7 +351,7 @@ code {
 
 .app-shell {
   display: grid;
-  gap: 22px;
+  gap: 24px;
   border-radius: 30px;
 }
 
@@ -322,66 +362,65 @@ code {
   gap: 18px;
 }
 
-.grade-app {
-  display: grid;
-  grid-template-columns: 0.88fr 1.12fr;
-  gap: 22px;
+.topo-identidade,
+.linha-transacao > div,
+.linha-admin > div,
+.saldo-centro {
+  min-width: 0;
 }
 
-.cartao-resumo {
-  background:
-    radial-gradient(circle at top right, rgba(212, 175, 55, 0.22), transparent 32%),
-    linear-gradient(135deg, #1f180b 0%, #111111 68%);
-}
-
-.cabecalho-resumo {
+.acoes-topo {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.bloco-saldo-principal {
+  display: grid;
+  gap: 22px;
+  padding: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.22), transparent 30%),
+    linear-gradient(135deg, rgba(30, 24, 11, 0.96), rgba(17, 17, 17, 0.98));
+  border-color: rgba(212, 175, 55, 0.28);
+}
+
+.saldo-centro {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 10px;
 }
 
 .rotulo-cartao {
-  margin: 0 0 10px;
+  margin: 0;
   color: #d5caa4;
 }
 
-.cartao-resumo h3 {
-  font-size: clamp(2rem, 4vw, 3.5rem);
+.bloco-saldo-principal h3 {
+  max-width: 100%;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-.selo-status,
-.pill-tipo,
-.pill-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 0.84rem;
-  font-weight: 800;
+.texto-saldo {
+  margin: 0;
 }
 
-.selo-status,
-.pill-status.approved {
-  background: rgba(212, 175, 55, 0.12);
-  color: var(--dourado-claro);
-  border: 1px solid rgba(212, 175, 55, 0.18);
-}
-
-.mini-resumos {
+.faixa-resumos {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 24px;
+  gap: 16px;
 }
 
 .mini-card {
-  padding: 16px 18px;
+  min-width: 0;
+  padding: 18px 20px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.1);
 }
 
 .mini-card span {
@@ -391,11 +430,39 @@ code {
 }
 
 .mini-card strong {
-  font-size: 1.08rem;
+  display: block;
+  font-size: clamp(1.05rem, 2.5vw, 1.3rem);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.destaque-entrada {
+  border-color: rgba(120, 212, 157, 0.18);
+}
+
+.destaque-entrada strong {
+  color: var(--verde);
+}
+
+.destaque-saida {
+  border-color: rgba(255, 151, 140, 0.18);
+}
+
+.destaque-saida strong {
+  color: var(--vermelho);
+}
+
+.secao-transacoes {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 22px;
+  align-items: start;
 }
 
 .lista-transacoes,
-.lista-usuarios-admin {
+.lista-usuarios-admin,
+.lista-logs-admin {
   display: grid;
   gap: 12px;
 }
@@ -410,11 +477,11 @@ code {
 }
 
 .linha-transacao {
-  grid-template-columns: 120px minmax(0, 1.4fr) minmax(120px, 0.8fr) auto;
+  grid-template-columns: 120px minmax(0, 1.3fr) minmax(130px, 0.7fr) auto;
 }
 
 .linha-admin {
-  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 0.7fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(130px, 0.7fr) minmax(0, 1.5fr);
 }
 
 .linha-transacao:last-child,
@@ -431,8 +498,30 @@ code {
 .linha-transacao h4,
 .linha-transacao p,
 .linha-admin p,
-.transacao-vazia p {
+.transacao-vazia p,
+.linha-log p {
   margin: 0;
+}
+
+.linha-transacao h4,
+.linha-admin strong,
+.linha-log strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pill-tipo,
+.pill-status,
+.pill-log {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .pill-tipo.entrada {
@@ -450,6 +539,12 @@ code {
   background: rgba(241, 196, 109, 0.12);
 }
 
+.pill-status.approved {
+  color: var(--dourado-claro);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
 .pill-status.rejected {
   color: var(--vermelho);
   background: rgba(255, 151, 140, 0.1);
@@ -460,8 +555,15 @@ code {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.valor-transacao {
+  min-width: 0;
+}
+
 .valor-transacao p {
   font-weight: 800;
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .valor-transacao.entrada p {
@@ -480,7 +582,7 @@ code {
 
 .grade-admin-cabecalho {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 0.7fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(130px, 0.7fr) minmax(0, 1.5fr);
   gap: 14px;
   padding: 0 0 14px;
   color: var(--dourado-claro);
@@ -490,26 +592,87 @@ code {
   text-transform: uppercase;
 }
 
+.admin-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 20px;
+}
+
+.linha-log {
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.linha-log strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.linha-log p {
+  margin-top: 4px;
+}
+
+.pill-log {
+  margin-bottom: 10px;
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--dourado-claro);
+}
+
 .transacao-vazia {
   padding: 20px;
   background: var(--surface-soft);
   border: 1px solid rgba(212, 175, 55, 0.08);
 }
 
+.modal-perfil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 5, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  transform: translateY(0);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.acoes-modal {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+
 .oculto {
   display: none !important;
 }
 
-@media (max-width: 1100px) {
-  .hero-auth,
-  .grade-app {
+@media (max-width: 1180px) {
+  .admin-grade,
+  .secao-transacoes,
+  .hero-auth {
     grid-template-columns: 1fr;
   }
 
   .hero-conteudo h1 {
     max-width: none;
   }
+}
 
+@media (max-width: 920px) {
   .linha-transacao,
   .linha-admin,
   .grade-admin-cabecalho {
@@ -525,22 +688,25 @@ code {
 
   .hero-auth,
   .app-shell,
+  .bloco-saldo-principal,
   .auth-card,
-  .cartao-resumo,
   .cartao-formulario,
   .cartao-lista,
-  .cartao-admin {
+  .cartao-admin,
+  .modal-card,
+  .admin-bloco {
     padding: 20px;
     border-radius: 22px;
   }
 
   .grade-destaques,
-  .mini-resumos {
+  .faixa-resumos {
     grid-template-columns: 1fr;
   }
 
   .topo-app,
-  .cabecalho-resumo {
+  .acoes-topo,
+  .acoes-modal {
     flex-direction: column;
     align-items: flex-start;
   }
