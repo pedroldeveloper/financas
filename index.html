@@ -53,7 +53,10 @@
             <label for="login-senha">Senha</label>
             <input id="login-senha" name="senha" type="password" placeholder="Digite sua senha" required minlength="6">
 
-            <button class="botao-principal" type="submit">Entrar</button>
+            <div class="acoes-auth">
+              <button class="botao-principal" type="submit">Entrar</button>
+              <button id="botao-reset-senha" class="botao-link" type="button">Esqueci minha senha</button>
+            </div>
           </form>
         </div>
 
@@ -87,6 +90,7 @@
 
         <div class="acoes-topo">
           <button id="botao-editar-perfil" class="botao-secundario" type="button">Editar perfil</button>
+          <button id="botao-excluir-minha-conta" class="botao-perigo" type="button">Excluir minha conta</button>
           <button id="botao-logout" class="botao-secundario" type="button">Sair</button>
         </div>
       </header>
@@ -169,28 +173,15 @@
         <div class="cabecalho-card interno">
           <p class="rotulo">Administração</p>
           <h3>Painel administrativo</h3>
-          <p>Controle de usuários e histórico de ações administrativas.</p>
+          <p>Controle de usuários com atualização em tempo real.</p>
         </div>
 
-        <div class="admin-grade">
-          <article class="admin-bloco">
-            <div class="grade-admin-cabecalho">
-              <span>Usuário</span>
-              <span>Status</span>
-              <span>Ações</span>
-            </div>
-            <div id="lista-usuarios-admin" class="lista-usuarios-admin"></div>
-          </article>
-
-          <article class="admin-bloco">
-            <div class="cabecalho-card interno pequeno">
-              <p class="rotulo">Logs</p>
-              <h3>Registro de ações</h3>
-              <p>Ações mais recentes executadas no painel administrativo.</p>
-            </div>
-            <div id="lista-logs-admin" class="lista-logs-admin"></div>
-          </article>
+        <div class="grade-admin-cabecalho">
+          <span>Usuário</span>
+          <span>Status</span>
+          <span>Ações</span>
         </div>
+        <div id="lista-usuarios-admin" class="lista-usuarios-admin"></div>
       </section>
     </section>
   </div>
@@ -228,4 +219,3 @@
   <script type="module" src="script.js"></script>
 </body>
 </html>
- 
