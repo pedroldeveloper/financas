@@ -1,10 +1,13 @@
 import { ADMIN_EMAIL, auth, db } from "./firebase.js";
 import {
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  deleteUser,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
-  signOut,
-  onAuthStateChanged
+  signInWithEmailAndPassword,
+  signOut
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import {
   addDoc,
@@ -28,17 +31,16 @@ const STATUS_LABEL = {
   deactivated: "Desativado"
 };
 
-const LOG_LABEL = {
-  approve: "Aprovacao",
-  reject: "Rejeicao",
-  deactivate: "Desativacao",
-  reactivate: "Reativacao",
-  password_reset_email: "Reset de senha",
-  delete: "Exclusao"
+const COLLECTIONS = {
+  users: "users",
+  transactions: "transactions",
+  deletedAccounts: "deleted_accounts"
 };
 
 const LIMITE_CENTAVOS = 99_999_999_999_999;
 const LIMITE_VALOR = LIMITE_CENTAVOS / 100;
+const ADMIN_EMAIL_NORMALIZADO = ADMIN_EMAIL.trim().toLowerCase();
+const textosOriginaisBotoes = new WeakMap();
 
 const elementos = {
   telaAuth: document.getElementById("tela-auth"),
@@ -50,8 +52,12 @@ const elementos = {
   formRegistro: document.getElementById("form-registro"),
   formTransacao: document.getElementById("form-transacao"),
   formPerfil: document.getElementById("form-perfil"),
+  campoLoginEmail: document.getElementById("login-email"),
+  campoLoginSenha: document.getElementById("login-senha"),
+  botaoResetSenha: document.getElementById("botao-reset-senha"),
   botaoLogout: document.getElementById("botao-logout"),
   botaoEditarPerfil: document.getElementById("botao-editar-perfil"),
+  botaoExcluirMinhaConta: document.getElementById("botao-excluir-minha-conta"),
   botaoCancelarPerfil: document.getElementById("botao-cancelar-perfil"),
   tituloUsuario: document.getElementById("titulo-usuario"),
   subtituloUsuario: document.getElementById("subtitulo-usuario"),
@@ -61,10 +67,10 @@ const elementos = {
   listaTransacoes: document.getElementById("lista-transacoes"),
   secaoAdmin: document.getElementById("secao-admin"),
   listaUsuariosAdmin: document.getElementById("lista-usuarios-admin"),
-  listaLogsAdmin: document.getElementById("lista-logs-admin"),
   transacaoData: document.getElementById("transacao-data"),
   transacaoValor: document.getElementById("transacao-valor"),
   modalPerfil: document.getElementById("modal-perfil"),
+  modalFundoPerfil: document.querySelector("#modal-perfil .modal-fundo"),
   tituloModalPerfil: document.getElementById("titulo-modal-perfil"),
   textoModalPerfil: document.getElementById("texto-modal-perfil"),
   campoUsername: document.getElementById("perfil-username")
@@ -75,54 +81,122 @@ let perfilAtual = null;
 let limpezaEscutaTransacoes = null;
 let limpezaEscutaUsuarios = null;
 let limpezaEscutaStatus = null;
-let limpezaEscutaLogs = null;
 let modoPerfilObrigatorio = false;
+let exclusaoContaAtualEmAndamento = false;
+
+function normalizarEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function ehAdminEmail(email) {
+  return normalizarEmail(email) === ADMIN_EMAIL_NORMALIZADO;
+}
 
 function exibirMensagem(elemento, texto, tipo) {
+  if (!elemento) {
+    return;
+  }
+
   elemento.textContent = texto;
   elemento.className = `mensagem ${tipo}`;
 }
 
 function ocultarMensagem(elemento) {
+  if (!elemento) {
+    return;
+  }
+
   elemento.textContent = "";
   elemento.className = "mensagem oculto";
 }
 
+function escaparHtml(valor) {
+  return String(valor ?? "").replace(/[&<>"']/g, (caractere) => {
+    const mapa = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    };
+
+    return mapa[caractere] || caractere;
+  });
+}
+
+function definirEstadoBotao(botao, carregando, textoCarregando = "Processando...") {
+  if (!botao) {
+    return;
+  }
+
+  if (!textosOriginaisBotoes.has(botao)) {
+    textosOriginaisBotoes.set(botao, botao.textContent);
+  }
+
+  botao.disabled = carregando;
+  botao.setAttribute("aria-busy", carregando ? "true" : "false");
+  botao.textContent = carregando ? textoCarregando : textosOriginaisBotoes.get(botao);
+}
+
+async function executarComEstadoDeCarregamento(botao, textoCarregando, operacao) {
+  if (botao?.disabled) {
+    return;
+  }
+
+  definirEstadoBotao(botao, true, textoCarregando);
+
+  try {
+    return await operacao();
+  } finally {
+    definirEstadoBotao(botao, false);
+  }
+}
+
+function obterDataHojeIso() {
+  const agora = new Date();
+  const fusoLocalMs = agora.getTimezoneOffset() * 60_000;
+  return new Date(agora.getTime() - fusoLocalMs).toISOString().slice(0, 10);
+}
+
 function definirDataPadrao() {
-  elementos.transacaoData.value = new Date().toISOString().slice(0, 10);
+  elementos.transacaoData.value = obterDataHojeIso();
 }
 
 function formatarMoeda(valor) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL"
-  }).format(valor);
+  }).format(Number(valor) || 0);
 }
 
 function formatarData(dataString) {
-  return new Date(`${dataString}T12:00:00`).toLocaleDateString("pt-BR", {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataString)) {
+    return "Data invalida";
+  }
+
+  const data = new Date(`${dataString}T12:00:00`);
+  if (Number.isNaN(data.getTime())) {
+    return "Data invalida";
+  }
+
+  return data.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
     year: "numeric"
   });
 }
 
-function formatarTimestamp(timestamp) {
-  if (!timestamp?.toDate) {
-    return "Data indisponivel";
-  }
-
-  return timestamp.toDate().toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
 function validarEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validarDataIso(data) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    return false;
+  }
+
+  const dataConvertida = new Date(`${data}T12:00:00`);
+  return !Number.isNaN(dataConvertida.getTime()) && dataConvertida.toISOString().startsWith(data);
 }
 
 function limparEscutas() {
@@ -139,11 +213,6 @@ function limparEscutas() {
   if (limpezaEscutaStatus) {
     limpezaEscutaStatus();
     limpezaEscutaStatus = null;
-  }
-
-  if (limpezaEscutaLogs) {
-    limpezaEscutaLogs();
-    limpezaEscutaLogs = null;
   }
 }
 
@@ -167,17 +236,44 @@ function obterValorMonetarioDoCampo(campo) {
   return Number.isFinite(valor) ? valor : 0;
 }
 
-function mostrarTelaAuth() {
-  usuarioAtual = null;
-  perfilAtual = null;
-  limparEscutas();
-  fecharModalPerfil();
-  elementos.telaApp.classList.add("oculto");
-  elementos.telaAuth.classList.remove("oculto");
+function resetarResumoFinanceiro() {
+  elementos.saldoAtual.textContent = formatarMoeda(0);
+  elementos.totalEntradas.textContent = formatarMoeda(0);
+  elementos.totalSaidas.textContent = formatarMoeda(0);
+  elementos.listaTransacoes.innerHTML = `
+    <div class="transacao-vazia">
+      <p>Nenhuma transacao foi registrada ate o momento.</p>
+    </div>
+  `;
+}
+
+function resetarPainelAdmin() {
+  elementos.listaUsuariosAdmin.innerHTML = "";
   elementos.secaoAdmin.classList.add("oculto");
 }
 
+function resetarFormularioTransacao() {
+  elementos.formTransacao.reset();
+  elementos.transacaoValor.dataset.valorNumerico = "";
+  definirDataPadrao();
+}
+
+function mostrarTelaAuth() {
+  usuarioAtual = null;
+  perfilAtual = null;
+  exclusaoContaAtualEmAndamento = false;
+  limparEscutas();
+  fecharModalPerfil();
+  resetarResumoFinanceiro();
+  resetarPainelAdmin();
+  resetarFormularioTransacao();
+  ocultarMensagem(elementos.mensagemApp);
+  elementos.telaApp.classList.add("oculto");
+  elementos.telaAuth.classList.remove("oculto");
+}
+
 function mostrarTelaApp() {
+  ocultarMensagem(elementos.mensagemAuth);
   elementos.telaAuth.classList.add("oculto");
   elementos.telaApp.classList.remove("oculto");
 }
@@ -186,12 +282,14 @@ function traduzirErroAuth(codigo) {
   const mapa = {
     "auth/email-already-in-use": "Este email ja esta em uso.",
     "auth/invalid-email": "O email informado e invalido.",
+    "auth/missing-email": "Informe um email valido para continuar.",
     "auth/weak-password": "A senha e insuficiente. Utilize no minimo 6 caracteres.",
     "auth/user-not-found": "Nao foi localizada uma conta com este email.",
     "auth/wrong-password": "A senha informada esta incorreta.",
     "auth/invalid-login-credentials": "Email ou senha invalidos.",
     "auth/network-request-failed": "Falha de conexao. Verifique sua internet e tente novamente.",
-    "auth/too-many-requests": "Foram detectadas muitas tentativas. Aguarde alguns minutos e tente novamente."
+    "auth/too-many-requests": "Foram detectadas muitas tentativas. Aguarde alguns minutos e tente novamente.",
+    "auth/requires-recent-login": "Entre novamente e repita a acao para confirmar sua identidade."
   };
 
   return mapa[codigo] || "Ocorreu um erro inesperado. Verifique a configuracao do servico.";
@@ -216,7 +314,7 @@ function traduzirErroFirestore(erro, padrao) {
 }
 
 function validarUsername(username) {
-  const limpo = username.trim();
+  const limpo = String(username || "").trim().replace(/\s+/g, " ");
 
   if (!limpo) {
     return "Informe um nome de usuario.";
@@ -230,7 +328,7 @@ function validarUsername(username) {
     return "O nome de usuario deve conter no maximo 30 caracteres.";
   }
 
-  if (!/^[a-zA-Z0-9._\-\sÀ-ÿ]+$/.test(limpo)) {
+  if (!/^[\p{L}\p{N}._\-\s]+$/u.test(limpo)) {
     return "Utilize apenas letras, numeros, espacos, ponto, hifen ou sublinhado.";
   }
 
@@ -275,31 +373,43 @@ function atualizarCabecalho() {
   elementos.subtituloUsuario.textContent = `Conta vinculada ao email ${usuarioAtual.email}.`;
 }
 
+async function obterMarcadorExclusao(uid) {
+  const referencia = doc(db, COLLECTIONS.deletedAccounts, uid);
+  const snapshot = await getDoc(referencia);
+  return snapshot.exists() ? snapshot.data() : null;
+}
+
 async function garantirDocumentoUsuario(user) {
-  const referenciaUsuario = doc(db, "users", user.uid);
+  const referenciaUsuario = doc(db, COLLECTIONS.users, user.uid);
   const snapshotUsuario = await getDoc(referenciaUsuario);
 
   if (snapshotUsuario.exists()) {
     const dados = snapshotUsuario.data();
     const atualizacao = {};
+    const emailNormalizado = normalizarEmail(user.email);
 
     if (typeof dados.username === "undefined") {
       atualizacao.username = "";
     }
 
-    if (typeof dados.email === "undefined") {
-      atualizacao.email = user.email;
+    if (typeof dados.email === "undefined" || normalizarEmail(dados.email) !== emailNormalizado) {
+      atualizacao.email = emailNormalizado;
     }
 
     if (typeof dados.uid === "undefined") {
       atualizacao.uid = user.uid;
     }
 
-    if (user.email === ADMIN_EMAIL && dados.status !== "approved") {
+    if (typeof dados.status === "undefined") {
+      atualizacao.status = ehAdminEmail(user.email) ? "approved" : "pending";
+    }
+
+    if (ehAdminEmail(user.email) && dados.status !== "approved") {
       atualizacao.status = "approved";
     }
 
     if (Object.keys(atualizacao).length) {
+      atualizacao.updatedAt = serverTimestamp();
       await updateDoc(referenciaUsuario, atualizacao);
       return { ...dados, ...atualizacao };
     }
@@ -309,10 +419,11 @@ async function garantirDocumentoUsuario(user) {
 
   const dadosIniciais = {
     uid: user.uid,
-    email: user.email,
+    email: normalizarEmail(user.email),
     username: "",
-    status: user.email === ADMIN_EMAIL ? "approved" : "pending",
-    createdAt: serverTimestamp()
+    status: ehAdminEmail(user.email) ? "approved" : "pending",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   };
 
   await setDoc(referenciaUsuario, dadosIniciais);
@@ -320,15 +431,35 @@ async function garantirDocumentoUsuario(user) {
 }
 
 async function registrarUsuario(email, senha) {
-  const credencial = await createUserWithEmailAndPassword(auth, email, senha);
-  await setDoc(doc(db, "users", credencial.user.uid), {
-    uid: credencial.user.uid,
-    email,
-    username: "",
-    status: "pending",
-    createdAt: serverTimestamp()
-  });
-  await signOut(auth);
+  let credencial = null;
+
+  try {
+    credencial = await createUserWithEmailAndPassword(auth, email, senha);
+    await setDoc(doc(db, COLLECTIONS.users, credencial.user.uid), {
+      uid: credencial.user.uid,
+      email,
+      username: "",
+      status: ehAdminEmail(email) ? "approved" : "pending",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    await signOut(auth);
+  } catch (erro) {
+    if (credencial?.user) {
+      try {
+        await deleteUser(credencial.user);
+      } catch (erroLimpeza) {
+        console.error("Erro ao desfazer cadastro incompleto:", erroLimpeza);
+        try {
+          await signOut(auth);
+        } catch (erroLogout) {
+          console.error("Erro ao encerrar sessao apos falha no cadastro:", erroLogout);
+        }
+      }
+    }
+
+    throw erro;
+  }
 }
 
 async function fazerLogin(email, senha) {
@@ -337,6 +468,15 @@ async function fazerLogin(email, senha) {
 
 async function fazerLogout() {
   await signOut(auth);
+}
+
+async function reautenticarUsuarioAtual(senhaAtual) {
+  if (!auth.currentUser?.email) {
+    throw new Error("Nao foi possivel identificar o email da conta atual.");
+  }
+
+  const credencial = EmailAuthProvider.credential(auth.currentUser.email, senhaAtual);
+  await reauthenticateWithCredential(auth.currentUser, credencial);
 }
 
 function calcularResumo(transacoes) {
@@ -371,14 +511,6 @@ function ordenarUsuarios(usuarios) {
   });
 }
 
-function ordenarLogs(logs) {
-  return [...logs].sort((atual, proxima) => {
-    const atualMs = atual.createdAt?.toMillis ? atual.createdAt.toMillis() : 0;
-    const proximaMs = proxima.createdAt?.toMillis ? proxima.createdAt.toMillis() : 0;
-    return proximaMs - atualMs;
-  });
-}
-
 function renderizarTransacoes(transacoes) {
   const resumo = calcularResumo(transacoes);
   elementos.saldoAtual.textContent = formatarMoeda(resumo.saldo);
@@ -386,11 +518,7 @@ function renderizarTransacoes(transacoes) {
   elementos.totalSaidas.textContent = formatarMoeda(resumo.saidas);
 
   if (!transacoes.length) {
-    elementos.listaTransacoes.innerHTML = `
-      <div class="transacao-vazia">
-        <p>Nenhuma transacao foi registrada ate o momento.</p>
-      </div>
-    `;
+    resetarResumoFinanceiro();
     return;
   }
 
@@ -400,19 +528,24 @@ function renderizarTransacoes(transacoes) {
       const valor = transacao.tipo === "entrada"
         ? `+${formatarMoeda(transacao.valor)}`
         : `-${formatarMoeda(transacao.valor)}`;
+      const descricao = escaparHtml(transacao.descricao);
+      const data = escaparHtml(formatarData(transacao.data));
+      const id = escaparHtml(transacao.id);
 
       return `
         <article class="linha-transacao">
           <span class="pill-tipo ${classe}">${transacao.tipo === "entrada" ? "Entrada" : "Saida"}</span>
           <div>
-            <h4>${transacao.descricao}</h4>
-            <small>${formatarData(transacao.data)}</small>
+            <h4>${descricao}</h4>
+            <small>${data}</small>
           </div>
           <div class="valor-transacao ${classe}">
             <p>${valor}</p>
             <small>Registro financeiro</small>
           </div>
-          <button class="botao-excluir" type="button" data-excluir="${transacao.id}">Excluir</button>
+          <button class="botao-excluir" type="button" data-excluir="${id}">
+            Excluir
+          </button>
         </article>
       `;
     })
@@ -420,12 +553,15 @@ function renderizarTransacoes(transacoes) {
 }
 
 function criarAcoesAdmin(usuario) {
+  const uid = escaparHtml(usuario.uid);
+  const email = escaparHtml(usuario.email);
+
   if (usuario.status === "pending") {
     return `
-      <button class="botao-admin-acao" type="button" data-acao-admin="approve" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao" type="button" data-acao-admin="approve" data-uid="${uid}" data-email="${email}">
         Aprovar
       </button>
-      <button class="botao-admin-acao rejeitar" type="button" data-acao-admin="reject" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao rejeitar" type="button" data-acao-admin="reject" data-uid="${uid}" data-email="${email}">
         Rejeitar
       </button>
     `;
@@ -433,26 +569,26 @@ function criarAcoesAdmin(usuario) {
 
   if (usuario.status === "approved") {
     return `
-      <button class="botao-admin-acao" type="button" data-acao-admin="deactivate" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao" type="button" data-acao-admin="deactivate" data-uid="${uid}" data-email="${email}">
         Desativar conta
       </button>
-      <button class="botao-admin-acao senha" type="button" data-acao-admin="password_reset_email" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao senha" type="button" data-acao-admin="password_reset_email" data-uid="${uid}" data-email="${email}">
         Resetar senha
       </button>
-      <button class="botao-admin-acao excluir" type="button" data-acao-admin="delete" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao excluir" type="button" data-acao-admin="delete" data-uid="${uid}" data-email="${email}">
         Excluir conta
       </button>
     `;
   }
 
   if (usuario.status === "rejected" || usuario.status === "deactivated") {
+    const textoReativacao = usuario.status === "rejected" ? "Aprovar novamente" : "Reativar conta";
+
     return `
-      ${usuario.status === "deactivated" ? `
-        <button class="botao-admin-acao" type="button" data-acao-admin="reactivate" data-uid="${usuario.uid}" data-email="${usuario.email}">
-          Reativar conta
-        </button>
-      ` : ""}
-      <button class="botao-admin-acao excluir" type="button" data-acao-admin="delete" data-uid="${usuario.uid}" data-email="${usuario.email}">
+      <button class="botao-admin-acao" type="button" data-acao-admin="reactivate" data-uid="${uid}" data-email="${email}">
+        ${textoReativacao}
+      </button>
+      <button class="botao-admin-acao excluir" type="button" data-acao-admin="delete" data-uid="${uid}" data-email="${email}">
         Excluir conta
       </button>
     `;
@@ -463,7 +599,7 @@ function criarAcoesAdmin(usuario) {
 
 function renderizarUsuariosAdmin(usuarios) {
   const usuariosFiltrados = ordenarUsuarios(
-    usuarios.filter((usuario) => usuario.email && usuario.email !== ADMIN_EMAIL)
+    usuarios.filter((usuario) => usuario.email && !ehAdminEmail(usuario.email))
   );
 
   if (!usuariosFiltrados.length) {
@@ -477,15 +613,18 @@ function renderizarUsuariosAdmin(usuarios) {
 
   elementos.listaUsuariosAdmin.innerHTML = usuariosFiltrados
     .map((usuario) => {
-      const nomeExibicao = usuario.username?.trim() || usuario.email;
+      const nomeExibicao = escaparHtml(usuario.username?.trim() || usuario.email);
+      const email = escaparHtml(usuario.email);
+      const status = escaparHtml(usuario.status);
+      const textoStatus = escaparHtml(STATUS_LABEL[usuario.status] || usuario.status);
 
       return `
-        <article class="linha-admin" data-uid="${usuario.uid}">
+        <article class="linha-admin" data-uid="${escaparHtml(usuario.uid)}">
           <div>
             <strong>${nomeExibicao}</strong>
-            <small>${usuario.email}</small>
+            <small>${email}</small>
           </div>
-          <span class="pill-status ${usuario.status}">${STATUS_LABEL[usuario.status] || usuario.status}</span>
+          <span class="pill-status ${status}">${textoStatus}</span>
           <div class="acoes-admin">
             ${criarAcoesAdmin(usuario)}
           </div>
@@ -495,26 +634,12 @@ function renderizarUsuariosAdmin(usuarios) {
     .join("");
 }
 
-function renderizarLogsAdmin(logs) {
-  if (!logs.length) {
-    elementos.listaLogsAdmin.innerHTML = `
-      <div class="transacao-vazia">
-        <p>Nenhuma acao administrativa foi registrada.</p>
-      </div>
-    `;
-    return;
+function obterMensagemContaExcluida(marcador) {
+  if (marcador?.deletedBy === "self") {
+    return "Sua conta foi excluida e os dados locais foram removidos.";
   }
 
-  elementos.listaLogsAdmin.innerHTML = ordenarLogs(logs)
-    .map((log) => `
-      <article class="linha-log">
-        <span class="pill-log">${LOG_LABEL[log.actionType] || log.actionType}</span>
-        <strong>${log.userEmail || "Usuario nao informado"}</strong>
-        <p>UID: ${log.affectedUid || "Nao informado"}</p>
-        <small>${formatarTimestamp(log.createdAt)}</small>
-      </article>
-    `)
-    .join("");
+  return "Sua conta foi excluida do sistema e o acesso foi bloqueado.";
 }
 
 function iniciarEscutaTransacoes(uid) {
@@ -522,7 +647,7 @@ function iniciarEscutaTransacoes(uid) {
     limpezaEscutaTransacoes();
   }
 
-  const consulta = query(collection(db, "transactions"), where("uid", "==", uid));
+  const consulta = query(collection(db, COLLECTIONS.transactions), where("uid", "==", uid));
   limpezaEscutaTransacoes = onSnapshot(
     consulta,
     (snapshot) => {
@@ -539,7 +664,11 @@ function iniciarEscutaTransacoes(uid) {
     },
     (erro) => {
       console.error("Erro ao carregar transacoes:", erro);
-      exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel carregar as transacoes."), "erro");
+      exibirMensagem(
+        elementos.mensagemApp,
+        traduzirErroFirestore(erro, "Nao foi possivel carregar as transacoes."),
+        "erro"
+      );
     }
   );
 }
@@ -550,79 +679,59 @@ function iniciarEscutaUsuariosAdmin() {
   }
 
   limpezaEscutaUsuarios = onSnapshot(
-    collection(db, "users"),
+    collection(db, COLLECTIONS.users),
     (snapshot) => {
       const usuarios = snapshot.docs.map((item) => item.data());
       renderizarUsuariosAdmin(usuarios);
     },
     (erro) => {
       console.error("Erro ao carregar usuarios admin:", erro);
-      exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel carregar a lista de usuarios."), "erro");
+      exibirMensagem(
+        elementos.mensagemApp,
+        traduzirErroFirestore(erro, "Nao foi possivel carregar a lista de usuarios."),
+        "erro"
+      );
     }
   );
-}
-
-function iniciarEscutaLogsAdmin() {
-  if (limpezaEscutaLogs) {
-    limpezaEscutaLogs();
-  }
-
-  limpezaEscutaLogs = onSnapshot(
-    collection(db, "admin_logs"),
-    (snapshot) => {
-      const logs = snapshot.docs.map((item) => item.data());
-      renderizarLogsAdmin(logs);
-    },
-    (erro) => {
-      console.error("Erro ao carregar logs admin:", erro);
-      exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel carregar os logs administrativos."), "erro");
-    }
-  );
-}
-
-async function registrarLogAdmin(actionType, affectedUid, userEmail) {
-  try {
-    await addDoc(collection(db, "admin_logs"), {
-      actionType,
-      affectedUid,
-      userEmail,
-      createdAt: serverTimestamp()
-    });
-  } catch (erro) {
-    console.error("Erro ao registrar log admin:", erro);
-    throw erro;
-  }
 }
 
 async function excluirTransacoesDoUsuario(uid) {
-  try {
-    const consulta = query(collection(db, "transactions"), where("uid", "==", uid));
-    const snapshot = await getDocs(consulta);
-    await Promise.all(snapshot.docs.map((item) => deleteDoc(doc(db, "transactions", item.id))));
-  } catch (erro) {
-    console.error("Erro ao excluir transacoes do usuario:", erro);
-    throw erro;
-  }
+  const consulta = query(collection(db, COLLECTIONS.transactions), where("uid", "==", uid));
+  const snapshot = await getDocs(consulta);
+  await Promise.all(snapshot.docs.map((item) => deleteDoc(doc(db, COLLECTIONS.transactions, item.id))));
 }
 
 async function obterUsuarioPorUid(uid) {
-  try {
-    const snapshotUsuario = await getDoc(doc(db, "users", uid));
-    if (!snapshotUsuario.exists()) {
-      return null;
-    }
-
-    return snapshotUsuario.data();
-  } catch (erro) {
-    console.error("Erro ao buscar usuario por UID:", erro);
-    throw erro;
+  const snapshotUsuario = await getDoc(doc(db, COLLECTIONS.users, uid));
+  if (!snapshotUsuario.exists()) {
+    return null;
   }
+
+  return snapshotUsuario.data();
+}
+
+async function registrarMarcadorExclusao(uid, email, deletedBy) {
+  await setDoc(doc(db, COLLECTIONS.deletedAccounts, uid), {
+    uid,
+    email: normalizarEmail(email),
+    deletedBy,
+    deletedAt: serverTimestamp()
+  });
 }
 
 async function validarAcesso(user) {
+  const marcadorExclusao = await obterMarcadorExclusao(user.uid);
+  if (marcadorExclusao) {
+    return {
+      permitido: false,
+      status: "deleted",
+      mensagem: obterMensagemContaExcluida(marcadorExclusao)
+    };
+  }
+
   const dados = await garantirDocumentoUsuario(user);
 
-  if (user.email === ADMIN_EMAIL) {
+  if (ehAdminEmail(user.email)) {
     return {
       permitido: true,
       admin: true,
@@ -667,14 +776,31 @@ function iniciarEscutaStatusUsuario(user) {
   }
 
   limpezaEscutaStatus = onSnapshot(
-    doc(db, "users", user.uid),
+    doc(db, COLLECTIONS.users, user.uid),
     async (snapshotUsuario) => {
       if (!snapshotUsuario.exists()) {
-        exibirMensagem(
-          elementos.mensagemAuth,
-          "Sua conta foi removida do sistema. O acesso ao aplicativo foi bloqueado.",
-          "erro"
-        );
+        if (exclusaoContaAtualEmAndamento) {
+          return;
+        }
+
+        try {
+          const marcadorExclusao = await obterMarcadorExclusao(user.uid);
+          exibirMensagem(
+            elementos.mensagemAuth,
+            marcadorExclusao
+              ? obterMensagemContaExcluida(marcadorExclusao)
+              : "Sua conta foi removida do sistema. O acesso ao aplicativo foi bloqueado.",
+            "erro"
+          );
+        } catch (erroLeitura) {
+          console.error("Erro ao validar exclusao da conta:", erroLeitura);
+          exibirMensagem(
+            elementos.mensagemAuth,
+            "Sua conta nao esta mais disponivel no sistema.",
+            "erro"
+          );
+        }
+
         await fazerLogout();
         return;
       }
@@ -685,11 +811,11 @@ function iniciarEscutaStatusUsuario(user) {
 
       if (!dados.username?.trim()) {
         abrirModalPerfil(true, "");
-      } else if (!elementos.modalPerfil.classList.contains("oculto") && !modoPerfilObrigatorio) {
+      } else if (!elementos.modalPerfil.classList.contains("oculto")) {
         elementos.campoUsername.value = dados.username;
       }
 
-      if (user.email !== ADMIN_EMAIL && dados.status !== "approved") {
+      if (!ehAdminEmail(user.email) && dados.status !== "approved") {
         const mensagem = dados.status === "deactivated"
           ? "Conta desativada pelo administrador."
           : dados.status === "rejected"
@@ -702,7 +828,11 @@ function iniciarEscutaStatusUsuario(user) {
     },
     async (erro) => {
       console.error("Erro ao observar status do usuario:", erro);
-      exibirMensagem(elementos.mensagemAuth, traduzirErroFirestore(erro, "Nao foi possivel validar o status da conta."), "erro");
+      exibirMensagem(
+        elementos.mensagemAuth,
+        traduzirErroFirestore(erro, "Nao foi possivel validar o status da conta."),
+        "erro"
+      );
       await fazerLogout();
     }
   );
@@ -713,16 +843,16 @@ async function prepararApp(user, perfil) {
   perfilAtual = perfil;
   atualizarCabecalho();
   ocultarMensagem(elementos.mensagemApp);
+  resetarFormularioTransacao();
   mostrarTelaApp();
   iniciarEscutaTransacoes(user.uid);
   iniciarEscutaStatusUsuario(user);
 
-  if (user.email === ADMIN_EMAIL) {
+  if (ehAdminEmail(user.email)) {
     elementos.secaoAdmin.classList.remove("oculto");
     iniciarEscutaUsuariosAdmin();
-    iniciarEscutaLogsAdmin();
   } else {
-    elementos.secaoAdmin.classList.add("oculto");
+    resetarPainelAdmin();
   }
 
   if (!perfil?.username?.trim()) {
@@ -754,11 +884,11 @@ async function tratarMudancaAutenticacao(user) {
     await prepararApp(user, validacao.perfil);
   } catch (erro) {
     console.error("Erro ao tratar autenticacao:", erro);
-    exibirMensagem(
-      elementos.mensagemAuth,
-      traduzirErroFirestore(erro, "Nao foi possivel validar seu acesso no momento."),
-      "erro"
-    );
+    const mensagem = erro?.code?.startsWith("auth/")
+      ? traduzirErroAuth(erro.code)
+      : traduzirErroFirestore(erro, "Nao foi possivel validar seu acesso no momento.");
+
+    exibirMensagem(elementos.mensagemAuth, mensagem, "erro");
     await fazerLogout();
   }
 }
@@ -784,27 +914,34 @@ async function enviarRegistro(evento) {
   ocultarMensagem(elementos.mensagemAuth);
 
   const dados = new FormData(elementos.formRegistro);
-  const email = dados.get("email").toString().trim();
-  const senha = dados.get("senha").toString();
-
+  const email = normalizarEmail(dados.get("email"));
+  const senha = String(dados.get("senha") || "");
   const erroValidacao = validarFormularioAuth(email, senha);
+
   if (erroValidacao) {
     exibirMensagem(elementos.mensagemAuth, erroValidacao, "erro");
     return;
   }
 
-  try {
-    await registrarUsuario(email, senha);
-    elementos.formRegistro.reset();
-    exibirMensagem(
-      elementos.mensagemAuth,
-      "Cadastro enviado com sucesso. Aguarde aprovacao do administrador.",
-      "sucesso"
-    );
-  } catch (erro) {
-    console.error("Erro no registro:", erro);
-    exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
-  }
+  const botao = evento.submitter || elementos.formRegistro.querySelector("button[type='submit']");
+
+  await executarComEstadoDeCarregamento(botao, "Registrando...", async () => {
+    try {
+      await registrarUsuario(email, senha);
+      elementos.formRegistro.reset();
+      exibirMensagem(
+        elementos.mensagemAuth,
+        "Cadastro enviado com sucesso. Aguarde aprovacao do administrador.",
+        "sucesso"
+      );
+    } catch (erro) {
+      console.error("Erro no registro:", erro);
+      const mensagem = erro?.code?.startsWith("auth/")
+        ? traduzirErroAuth(erro.code)
+        : traduzirErroFirestore(erro, "Nao foi possivel concluir o cadastro.");
+      exibirMensagem(elementos.mensagemAuth, mensagem, "erro");
+    }
+  });
 }
 
 async function enviarLogin(evento) {
@@ -812,22 +949,55 @@ async function enviarLogin(evento) {
   ocultarMensagem(elementos.mensagemAuth);
 
   const dados = new FormData(elementos.formLogin);
-  const email = dados.get("email").toString().trim();
-  const senha = dados.get("senha").toString();
-
+  const email = normalizarEmail(dados.get("email"));
+  const senha = String(dados.get("senha") || "");
   const erroValidacao = validarFormularioAuth(email, senha);
+
   if (erroValidacao) {
     exibirMensagem(elementos.mensagemAuth, erroValidacao, "erro");
     return;
   }
 
-  try {
-    await fazerLogin(email, senha);
-    elementos.formLogin.reset();
-  } catch (erro) {
-    console.error("Erro no login:", erro);
-    exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
+  const botao = evento.submitter || elementos.formLogin.querySelector("button[type='submit']");
+
+  await executarComEstadoDeCarregamento(botao, "Entrando...", async () => {
+    try {
+      await fazerLogin(email, senha);
+      elementos.formLogin.reset();
+    } catch (erro) {
+      console.error("Erro no login:", erro);
+      exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
+    }
+  });
+}
+
+async function solicitarResetSenha() {
+  ocultarMensagem(elementos.mensagemAuth);
+
+  const email = normalizarEmail(elementos.campoLoginEmail.value);
+  if (!validarEmail(email)) {
+    exibirMensagem(
+      elementos.mensagemAuth,
+      "Informe um email valido no campo de login para receber o link de redefinicao.",
+      "erro"
+    );
+    elementos.campoLoginEmail.focus();
+    return;
   }
+
+  await executarComEstadoDeCarregamento(elementos.botaoResetSenha, "Enviando...", async () => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      exibirMensagem(
+        elementos.mensagemAuth,
+        "Email de redefinicao enviado com sucesso. Verifique sua caixa de entrada.",
+        "sucesso"
+      );
+    } catch (erro) {
+      console.error("Erro ao enviar redefinicao de senha:", erro);
+      exibirMensagem(elementos.mensagemAuth, traduzirErroAuth(erro.code), "erro");
+    }
+  });
 }
 
 function validarFormularioTransacao(tipo, valor, descricao, data) {
@@ -851,6 +1021,14 @@ function validarFormularioTransacao(tipo, valor, descricao, data) {
     return "A descricao deve conter pelo menos 3 caracteres.";
   }
 
+  if (descricao.trim().length > 80) {
+    return "A descricao deve conter no maximo 80 caracteres.";
+  }
+
+  if (!validarDataIso(data)) {
+    return "Informe uma data valida para a transacao.";
+  }
+
   return "";
 }
 
@@ -859,87 +1037,112 @@ async function enviarTransacao(evento) {
   ocultarMensagem(elementos.mensagemApp);
 
   if (!usuarioAtual) {
+    exibirMensagem(elementos.mensagemApp, "Entre novamente para registrar uma transacao.", "erro");
     return;
   }
 
   const dados = new FormData(elementos.formTransacao);
-  const tipo = dados.get("tipo").toString();
+  const tipo = String(dados.get("tipo") || "");
   const valor = obterValorMonetarioDoCampo(elementos.transacaoValor);
-  const descricao = dados.get("descricao").toString().trim();
-  const data = dados.get("data").toString();
-
+  const descricao = String(dados.get("descricao") || "").trim().replace(/\s+/g, " ");
+  const data = String(dados.get("data") || "");
   const erroValidacao = validarFormularioTransacao(tipo, valor, descricao, data);
+
   if (erroValidacao) {
     exibirMensagem(elementos.mensagemApp, erroValidacao, "erro");
     return;
   }
 
-  try {
-    await addDoc(collection(db, "transactions"), {
-      uid: usuarioAtual.uid,
-      tipo,
-      valor,
-      descricao,
-      data,
-      createdAt: serverTimestamp()
-    });
+  const botao = evento.submitter || elementos.formTransacao.querySelector("button[type='submit']");
 
-    elementos.formTransacao.reset();
-    elementos.transacaoValor.dataset.valorNumerico = "";
-    definirDataPadrao();
-    exibirMensagem(elementos.mensagemApp, "Transacao registrada com sucesso.", "sucesso");
-  } catch (erro) {
-    console.error("Erro ao registrar transacao:", erro);
-    exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel registrar a transacao."), "erro");
+  await executarComEstadoDeCarregamento(botao, "Salvando...", async () => {
+    try {
+      await addDoc(collection(db, COLLECTIONS.transactions), {
+        uid: usuarioAtual.uid,
+        tipo,
+        valor,
+        descricao,
+        data,
+        createdAt: serverTimestamp()
+      });
+
+      resetarFormularioTransacao();
+      exibirMensagem(elementos.mensagemApp, "Transacao registrada com sucesso.", "sucesso");
+    } catch (erro) {
+      console.error("Erro ao registrar transacao:", erro);
+      exibirMensagem(
+        elementos.mensagemApp,
+        traduzirErroFirestore(erro, "Nao foi possivel registrar a transacao."),
+        "erro"
+      );
+    }
+  });
+}
+
+async function excluirTransacao(id, botao) {
+  if (!window.confirm("Confirma a exclusao desta transacao?")) {
+    return;
   }
+
+  await executarComEstadoDeCarregamento(botao, "Excluindo...", async () => {
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.transactions, id));
+      exibirMensagem(elementos.mensagemApp, "Transacao excluida com sucesso.", "sucesso");
+    } catch (erro) {
+      console.error("Erro ao excluir transacao:", erro);
+      exibirMensagem(
+        elementos.mensagemApp,
+        traduzirErroFirestore(erro, "Nao foi possivel excluir a transacao."),
+        "erro"
+      );
+    }
+  });
 }
 
-async function excluirTransacao(id) {
-  try {
-    await deleteDoc(doc(db, "transactions", id));
-    exibirMensagem(elementos.mensagemApp, "Transacao excluida com sucesso.", "sucesso");
-  } catch (erro) {
-    console.error("Erro ao excluir transacao:", erro);
-    exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel excluir a transacao."), "erro");
-  }
+async function aprovarUsuario(uid) {
+  await updateDoc(doc(db, COLLECTIONS.users, uid), {
+    status: "approved",
+    updatedAt: serverTimestamp()
+  });
 }
 
-async function aprovarUsuario(uid, email) {
-  await updateDoc(doc(db, "users", uid), { status: "approved" });
-  await registrarLogAdmin("approve", uid, email);
+async function rejeitarUsuario(uid) {
+  await updateDoc(doc(db, COLLECTIONS.users, uid), {
+    status: "rejected",
+    updatedAt: serverTimestamp()
+  });
 }
 
-async function rejeitarUsuario(uid, email) {
-  await updateDoc(doc(db, "users", uid), { status: "rejected" });
-  await registrarLogAdmin("reject", uid, email);
+async function desativarUsuario(uid) {
+  await updateDoc(doc(db, COLLECTIONS.users, uid), {
+    status: "deactivated",
+    updatedAt: serverTimestamp()
+  });
 }
 
-async function desativarUsuario(uid, email) {
-  await updateDoc(doc(db, "users", uid), { status: "deactivated" });
-  await registrarLogAdmin("deactivate", uid, email);
+async function reativarUsuario(uid) {
+  await updateDoc(doc(db, COLLECTIONS.users, uid), {
+    status: "approved",
+    updatedAt: serverTimestamp()
+  });
 }
 
-async function reativarUsuario(uid, email) {
-  await updateDoc(doc(db, "users", uid), { status: "approved" });
-  await registrarLogAdmin("reactivate", uid, email);
-}
-
-async function enviarResetSenhaPorEmail(uid, email) {
+async function enviarResetSenhaPorEmail(email) {
   await sendPasswordResetEmail(auth, email);
-  await registrarLogAdmin("password_reset_email", uid, email);
 }
 
-async function excluirContaUsuario(uid, email) {
+async function excluirContaUsuarioAdmin(uid, email) {
+  await registrarMarcadorExclusao(uid, email, "admin");
   await excluirTransacoesDoUsuario(uid);
-  await deleteDoc(doc(db, "users", uid));
-  await registrarLogAdmin("delete", uid, email);
+  await deleteDoc(doc(db, COLLECTIONS.users, uid));
 }
 
 function confirmarAcaoAdmin(acao) {
   const mensagens = {
     deactivate: "Confirma a desativacao desta conta?",
+    reject: "Confirma a rejeicao deste cadastro?",
     password_reset_email: "Deseja enviar um email para redefinicao de senha deste usuario?",
-    delete: "Confirma a exclusao da conta deste usuario no Firestore?"
+    delete: "Confirma a exclusao desta conta e dos dados financeiros?"
   };
 
   if (!mensagens[acao]) {
@@ -950,7 +1153,7 @@ function confirmarAcaoAdmin(acao) {
 }
 
 async function executarAcaoAdmin(acao, uid, email) {
-  if (!usuarioAtual || usuarioAtual.email !== ADMIN_EMAIL) {
+  if (!usuarioAtual || !ehAdminEmail(usuarioAtual.email)) {
     throw new Error("Acao administrativa permitida apenas para o admin configurado.");
   }
 
@@ -963,7 +1166,7 @@ async function executarAcaoAdmin(acao, uid, email) {
     throw new Error("Usuario nao encontrado para a operacao solicitada.");
   }
 
-  if (usuario.email === ADMIN_EMAIL) {
+  if (ehAdminEmail(usuario.email)) {
     throw new Error("A conta administrativa nao pode ser alterada por este painel.");
   }
 
@@ -972,40 +1175,40 @@ async function executarAcaoAdmin(acao, uid, email) {
   }
 
   if (acao === "approve") {
-    await aprovarUsuario(uid, email);
+    await aprovarUsuario(uid);
     exibirMensagem(elementos.mensagemApp, "Usuario aprovado com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "reject") {
-    await rejeitarUsuario(uid, email);
+    await rejeitarUsuario(uid);
     exibirMensagem(elementos.mensagemApp, "Usuario rejeitado com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "deactivate") {
-    await desativarUsuario(uid, email);
+    await desativarUsuario(uid);
     exibirMensagem(elementos.mensagemApp, "Conta desativada com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "reactivate") {
-    await reativarUsuario(uid, email);
+    await reativarUsuario(uid);
     exibirMensagem(elementos.mensagemApp, "Conta reativada com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "password_reset_email") {
-    await enviarResetSenhaPorEmail(uid, email);
+    await enviarResetSenhaPorEmail(email);
     exibirMensagem(elementos.mensagemApp, "Email de redefinicao enviado com sucesso.", "sucesso");
     return;
   }
 
   if (acao === "delete") {
-    await excluirContaUsuario(uid, email);
+    await excluirContaUsuarioAdmin(uid, email);
     exibirMensagem(
       elementos.mensagemApp,
-      "Conta removida da colecao users e transacoes excluidas. A remocao do Firebase Authentication exige Admin SDK ou Cloud Function.",
+      "Conta removida do painel e novos acessos foram bloqueados para este UID.",
       "info"
     );
     return;
@@ -1014,16 +1217,64 @@ async function executarAcaoAdmin(acao, uid, email) {
   throw new Error(`Acao administrativa desconhecida: ${acao}`);
 }
 
+async function excluirMinhaConta() {
+  if (!usuarioAtual || !auth.currentUser || auth.currentUser.uid !== usuarioAtual.uid) {
+    exibirMensagem(elementos.mensagemApp, "Nao foi possivel validar sua sessao para excluir a conta.", "erro");
+    return;
+  }
+
+  if (!window.confirm("Confirma a exclusao da sua conta e de todas as suas transacoes?")) {
+    return;
+  }
+
+  await executarComEstadoDeCarregamento(elementos.botaoExcluirMinhaConta, "Excluindo...", async () => {
+    try {
+      const senhaAtual = window.prompt("Para confirmar a exclusao da conta, informe sua senha atual:");
+      if (senhaAtual === null) {
+        return;
+      }
+
+      if (senhaAtual.length < 6) {
+        exibirMensagem(elementos.mensagemApp, "Informe sua senha atual corretamente para excluir a conta.", "erro");
+        return;
+      }
+
+      await reautenticarUsuarioAtual(senhaAtual);
+      exclusaoContaAtualEmAndamento = true;
+
+      exibirMensagem(
+        elementos.mensagemAuth,
+        "Conta excluida com sucesso.",
+        "sucesso"
+      );
+
+      await registrarMarcadorExclusao(usuarioAtual.uid, usuarioAtual.email, "self");
+      await excluirTransacoesDoUsuario(usuarioAtual.uid);
+      await deleteDoc(doc(db, COLLECTIONS.users, usuarioAtual.uid));
+      await deleteUser(auth.currentUser);
+    } catch (erro) {
+      exclusaoContaAtualEmAndamento = false;
+      console.error("Erro ao excluir a propria conta:", erro);
+
+      const mensagem = erro?.code?.startsWith("auth/")
+        ? traduzirErroAuth(erro.code)
+        : traduzirErroFirestore(erro, "Nao foi possivel excluir a conta.");
+      exibirMensagem(elementos.mensagemApp, mensagem, "erro");
+    }
+  });
+}
+
 async function salvarUsername(evento) {
   evento.preventDefault();
   ocultarMensagem(elementos.mensagemPerfil);
 
   if (!usuarioAtual) {
+    exibirMensagem(elementos.mensagemPerfil, "Entre novamente para atualizar o perfil.", "erro");
     return;
   }
 
   const dados = new FormData(elementos.formPerfil);
-  const username = dados.get("username").toString().trim();
+  const username = String(dados.get("username") || "").trim().replace(/\s+/g, " ");
   const erroValidacao = validarUsername(username);
 
   if (erroValidacao) {
@@ -1031,22 +1282,38 @@ async function salvarUsername(evento) {
     return;
   }
 
-  try {
-    await updateDoc(doc(db, "users", usuarioAtual.uid), { username });
-    exibirMensagem(elementos.mensagemPerfil, "Nome de usuario atualizado com sucesso.", "sucesso");
-    exibirMensagem(elementos.mensagemApp, "Perfil atualizado com sucesso.", "sucesso");
-    perfilAtual = { ...perfilAtual, username };
-    atualizarCabecalho();
-    window.setTimeout(() => {
-      fecharModalPerfil();
-    }, 500);
-  } catch (erro) {
-    console.error("Erro ao salvar username:", erro);
-    exibirMensagem(elementos.mensagemPerfil, traduzirErroFirestore(erro, "Nao foi possivel salvar o nome de usuario."), "erro");
-  }
+  const botao = evento.submitter || elementos.formPerfil.querySelector("button[type='submit']");
+
+  await executarComEstadoDeCarregamento(botao, "Salvando...", async () => {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.users, usuarioAtual.uid), {
+        username,
+        updatedAt: serverTimestamp()
+      });
+      exibirMensagem(elementos.mensagemPerfil, "Nome de usuario atualizado com sucesso.", "sucesso");
+      exibirMensagem(elementos.mensagemApp, "Perfil atualizado com sucesso.", "sucesso");
+      perfilAtual = { ...perfilAtual, username };
+      atualizarCabecalho();
+      window.setTimeout(() => {
+        fecharModalPerfil();
+      }, 450);
+    } catch (erro) {
+      console.error("Erro ao salvar username:", erro);
+      exibirMensagem(
+        elementos.mensagemPerfil,
+        traduzirErroFirestore(erro, "Nao foi possivel salvar o nome de usuario."),
+        "erro"
+      );
+    }
+  });
 }
 
 function abrirEdicaoPerfil() {
+  if (!usuarioAtual) {
+    exibirMensagem(elementos.mensagemApp, "Entre novamente para editar o perfil.", "erro");
+    return;
+  }
+
   abrirModalPerfil(false, perfilAtual?.username || "");
 }
 
@@ -1055,13 +1322,36 @@ elementos.formLogin.addEventListener("submit", enviarLogin);
 elementos.formTransacao.addEventListener("submit", enviarTransacao);
 elementos.formPerfil.addEventListener("submit", salvarUsername);
 
+elementos.botaoResetSenha.addEventListener("click", solicitarResetSenha);
+
 elementos.botaoLogout.addEventListener("click", async () => {
-  await fazerLogout();
+  await executarComEstadoDeCarregamento(elementos.botaoLogout, "Saindo...", async () => {
+    try {
+      await fazerLogout();
+    } catch (erro) {
+      console.error("Erro ao sair:", erro);
+      exibirMensagem(elementos.mensagemApp, traduzirErroAuth(erro.code), "erro");
+    }
+  });
 });
 
 elementos.botaoEditarPerfil.addEventListener("click", abrirEdicaoPerfil);
+elementos.botaoExcluirMinhaConta.addEventListener("click", excluirMinhaConta);
+
 elementos.botaoCancelarPerfil.addEventListener("click", () => {
   if (!modoPerfilObrigatorio) {
+    fecharModalPerfil();
+  }
+});
+
+elementos.modalFundoPerfil.addEventListener("click", () => {
+  if (!modoPerfilObrigatorio) {
+    fecharModalPerfil();
+  }
+});
+
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !modoPerfilObrigatorio && !elementos.modalPerfil.classList.contains("oculto")) {
     fecharModalPerfil();
   }
 });
@@ -1070,13 +1360,13 @@ elementos.transacaoValor.addEventListener("input", () => {
   normalizarCampoMoeda(elementos.transacaoValor);
 });
 
-elementos.listaTransacoes.addEventListener("click", (evento) => {
+elementos.listaTransacoes.addEventListener("click", async (evento) => {
   const botao = evento.target.closest("button[data-excluir]");
   if (!botao) {
     return;
   }
 
-  excluirTransacao(botao.dataset.excluir);
+  await excluirTransacao(botao.dataset.excluir, botao);
 });
 
 elementos.listaUsuariosAdmin.addEventListener("click", async (evento) => {
@@ -1085,13 +1375,19 @@ elementos.listaUsuariosAdmin.addEventListener("click", async (evento) => {
     return;
   }
 
-  try {
-    await executarAcaoAdmin(botao.dataset.acaoAdmin, botao.dataset.uid, botao.dataset.email);
-  } catch (erro) {
-    console.error("Erro ao executar acao administrativa:", erro);
-    exibirMensagem(elementos.mensagemApp, traduzirErroFirestore(erro, "Nao foi possivel concluir a acao administrativa."), "erro");
-  }
+  await executarComEstadoDeCarregamento(botao, "Processando...", async () => {
+    try {
+      await executarAcaoAdmin(botao.dataset.acaoAdmin, botao.dataset.uid, botao.dataset.email);
+    } catch (erro) {
+      console.error("Erro ao executar acao administrativa:", erro);
+      const mensagem = erro?.code?.startsWith("auth/")
+        ? traduzirErroAuth(erro.code)
+        : traduzirErroFirestore(erro, "Nao foi possivel concluir a acao administrativa.");
+      exibirMensagem(elementos.mensagemApp, mensagem, "erro");
+    }
+  });
 });
 
 definirDataPadrao();
+resetarResumoFinanceiro();
 onAuthStateChanged(auth, tratarMudancaAutenticacao);
