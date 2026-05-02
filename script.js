@@ -1038,7 +1038,9 @@ async function enviarRegistro(evento) {
         "Conta criada com sucesso. Aguarde aprovação do administrador.",
         "sucesso"
       );
+      setTimeout(() => {
       window.location.reload();
+      }, 3000);
       return;
     } catch (erro) {
       registrarErroSeguranca(emModoLogin ? "login" : "registro", erro);
