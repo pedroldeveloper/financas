@@ -1038,6 +1038,8 @@ async function enviarRegistro(evento) {
         "Conta criada com sucesso. Aguarde aprovação do administrador.",
         "sucesso"
       );
+      window.location.reload();
+      return;
     } catch (erro) {
       registrarErroSeguranca(emModoLogin ? "login" : "registro", erro);
       const mensagem = erro?.code?.startsWith("auth/")
